@@ -45,9 +45,6 @@ process SRA_TO_SAMPLESHEET {
         } else if (pipeline == 'taxprofiler') {
             pipeline_map << [ fasta: '' ]
         } else if (pipeline == 'ampliseq'){
-            pipeline_map << [sampleID: pipeline_map.sample]
-            pipeline_map << [forwardReads: pipeline_map.fastq_1]
-            pipeline_map << [reverseReads: pipeline_map.fastq_2]
             pipeline_map << [ run: '']
         }
     }
