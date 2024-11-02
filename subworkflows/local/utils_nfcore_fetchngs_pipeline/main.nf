@@ -62,7 +62,7 @@ workflow PIPELINE_INITIALISATION {
         pre_help_text,
         post_help_text,
         validate_params,
-        "params.yml"
+        "nextflow_schema.json"
     )
 
     //
@@ -84,7 +84,7 @@ workflow PIPELINE_INITIALISATION {
     inputPath                                               // Path
         |> Channel.of                                       // Channel<Path>
         |> flatMap { csv ->
-            splitCsv(csv, header: false, schema: 'assets/schema_input.yml')
+            splitCsv(csv, header: false, schema: 'assets/schema_input.json')
         }                                                   // Channel<String>
         |> unique                                           // Channel<String>
         |> set { ids }                                      // Channel<String>
@@ -111,7 +111,7 @@ workflow PIPELINE_COMPLETION {
 
     main:
 
-    let summary_params = paramsSummaryMap(workflow, parameters_schema: "params.yml")
+    let summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
 
     //
     // Completion email and summary
