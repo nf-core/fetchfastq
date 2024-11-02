@@ -21,6 +21,7 @@ nextflow.preview.output = true
 include { SRA                     } from './workflows/sra'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
+include { softwareVersionsToYAML  } from './subworkflows/nf-core/utils_nfcore_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,6 +57,8 @@ workflow NFCORE_FETCHNGS {
         params.sratools_pigz_args
     )
 
+    emit:
+    samples = SRA.out.samples
 }
 
 /*
@@ -66,6 +69,7 @@ workflow NFCORE_FETCHNGS {
 
 workflow {
 
+    main:
     //
     // SUBWORKFLOW: Run initialisation tasks
     //
@@ -98,6 +102,35 @@ workflow {
         params.monochrome_logs,
         params.hook_url
     )
+
+    publish:
+    NFCORE_FETCHNGS.out.samples >> 'samples'
+    softwareVersionsToYAML() >> 'versions'
+}
+
+
+output {
+    samples {
+        path { _meta, _fastq, _md5 ->
+            { file ->
+                def dir = [
+                    'fastq': 'fastq',
+                    'md5': 'fastq/md5'
+                ][file.ext]
+                "${dir}/${file.baseName}"
+            }
+        }
+        index {
+            path 'samplesheet/samplesheet.json'
+        }
+    }
+
+    versions {
+        path '.'
+        index {
+            path 'nf_core_fetchngs_software_mqc_versions.yml'
+        }
+    }
 }
 
 /*

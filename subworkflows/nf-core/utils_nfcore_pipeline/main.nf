@@ -93,27 +93,26 @@ def getWorkflowVersion() {
 // Get workflow version for pipeline
 //
 def workflowVersionToYAML() {
-    return """
-    Workflow:
-        $workflow.manifest.name: ${getWorkflowVersion()}
-        Nextflow: $workflow.nextflow.version
-    """.stripIndent().trim()
+    return Channel.of(
+        [ 'Workflow', workflow.manifest.name, getWorkflowVersion() ],
+        [ 'Workflow', 'Nextflow', workflow.nextflow.version ]
+    )
 }
 
 //
 // Get channel of software versions used in pipeline in YAML format
 //
-def softwareVersionsToYAML(ch_versions) {
-    return ch_versions
+def softwareVersionsToYAML() {
+    return Channel.topic('versions')
         .unique()
+        .mix(workflowVersionToYAML())
         .map { process, name, version ->
-            """
-            ${process.tokenize(':').last()}:
-                ${name}: ${version}
-            """.stripIndent().trim()
+            [
+                (process.tokenize(':').last()): [
+                    (name): version
+                ]
+            ]
         }
-        .unique()
-        .mix(Channel.of(workflowVersionToYAML()))
 }
 
 //

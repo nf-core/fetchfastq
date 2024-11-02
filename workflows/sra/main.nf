@@ -9,8 +9,6 @@ include { SRA_FASTQ_FTP           } from '../../modules/local/sra_fastq_ftp'
 include { SRA_IDS_TO_RUNINFO      } from '../../modules/local/sra_ids_to_runinfo'
 include { SRA_RUNINFO_TO_FTP      } from '../../modules/local/sra_runinfo_to_ftp'
 include { ASPERA_CLI              } from '../../modules/local/aspera_cli'
-include { SRA_TO_SAMPLESHEET      } from '../../modules/local/sra_to_samplesheet'
-include { softwareVersionsToYAML  } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,7 +69,7 @@ workflow SRA {
         .unique()
         .set { ch_sra_metadata }
 
-    ch_fastq = Channel.empty()
+    ch_samples = Channel.empty()
     if (!skip_fastq_download) {
 
         ch_sra_metadata
@@ -125,87 +123,35 @@ workflow SRA {
         )
 
         // Isolate FASTQ channel which will be added to emit block
-        SRA_FASTQ_FTP
-            .out
-            .fastq
+        ch_fastq = SRA_FASTQ_FTP.out.fastq
             .mix(FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS.out.reads)
             .mix(ASPERA_CLI.out.fastq)
-            .tap { ch_fastq }
+
+        ch_md5 = SRA_FASTQ_FTP.out.md5
+            .mix(ASPERA_CLI.out.md5)
+
+        ch_samples = ch_fastq
+            .join(ch_md5, remainder: true)
             .map {
-                meta, fastq ->
+                meta, fastq, md5 ->
                     def reads = fastq instanceof List ? fastq.flatten() : [ fastq ]
                     def meta_clone = meta.clone()
 
-                    meta_clone.fastq_1 = reads[0] ? "${workflow.outputDir}/fastq/${reads[0].getName()}" : ''
-                    meta_clone.fastq_2 = reads[1] && !meta.single_end ? "${workflow.outputDir}/fastq/${reads[1].getName()}" : ''
+                    meta_clone.fastq_1 = reads[0]
+                    meta_clone.fastq_2 = reads[1] && !meta.single_end ? reads[1] : null
+
+                    meta_clone.md5_1 = md5[0]
+                    meta_clone.md5_2 = md5[1] && !meta.single_end ? md5[1] : null
 
                     return meta_clone
             }
-            .set { ch_sra_metadata }
     }
-
-    //
-    // MODULE: Stage FastQ files downloaded by SRA together and auto-create a samplesheet
-    //
-    SRA_TO_SAMPLESHEET (
-        ch_sra_metadata,
-        nf_core_pipeline,
-        nf_core_rnaseq_strandedness,
-        sample_mapping_fields
-    )
-
-    // Merge samplesheets and mapping files across all samples
-    SRA_TO_SAMPLESHEET
-        .out
-        .samplesheet
-        .map { it[1] }
-        .collectFile(name:'tmp_samplesheet.csv', newLine: true, keepHeader: true, sort: { it.baseName })
-        .map { it.text.tokenize('\n').join('\n') }
-        .collectFile(name:'samplesheet.csv')
-        .set { ch_samplesheet }
-
-    SRA_TO_SAMPLESHEET
-        .out
-        .mappings
-        .map { it[1] }
-        .collectFile(name:'tmp_id_mappings.csv', newLine: true, keepHeader: true, sort: { it.baseName })
-        .map { it.text.tokenize('\n').join('\n') }
-        .collectFile(name:'id_mappings.csv')
-        .set { ch_mappings }
-
-    //
-    // MODULE: Create a MutiQC config file with sample name mappings
-    //
-    ch_sample_mappings_yml = Channel.empty()
-    if (sample_mapping_fields) {
-        MULTIQC_MAPPINGS_CONFIG (
-            ch_mappings
-        )
-        ch_sample_mappings_yml = MULTIQC_MAPPINGS_CONFIG.out.yml
-    }
-
-    //
-    // Collate and save software versions
-    //
-    softwareVersionsToYAML(Channel.topic('versions'))
-        .collectFile(name: 'nf_core_fetchngs_software_mqc_versions.yml', sort: true, newLine: true)
-        .set { ch_versions_yml }
 
     emit:
-    samplesheet     = ch_samplesheet
-    mappings        = ch_mappings
-    sample_mappings = ch_sample_mappings_yml
-    sra_metadata    = ch_sra_metadata
+    samples = ch_samples
 
     publish:
-    ch_fastq                    >> 'fastq'
-    ASPERA_CLI.out.md5          >> 'fastq/md5'
-    SRA_FASTQ_FTP.out.md5       >> 'fastq/md5'
     SRA_RUNINFO_TO_FTP.out.tsv  >> 'metadata'
-    ch_versions_yml             >> 'pipeline_info'
-    ch_samplesheet              >> 'samplesheet'
-    ch_mappings                 >> 'samplesheet'
-    ch_sample_mappings_yml      >> 'samplesheet'
 }
 
 /*
