@@ -9,17 +9,18 @@
 ----------------------------------------------------------------------------------------
 */
 
-nextflow.preview.dsl = 3
+nextflow.preview.types = true
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
+    IMPORT FUNCTIONS / MODULES / WORKFLOWS / TYPES
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
 include { SRA                     } from './workflows/sra'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
+include { SraParams               } from './workflows/sra'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,7 +35,7 @@ workflow NFCORE_FETCHNGS {
 
     take:
     ids     : Channel<String>
-    params  : ParamsMap
+    params  : SraParams
 
     main:
 
@@ -43,18 +44,7 @@ workflow NFCORE_FETCHNGS {
     //
     SRA (
         ids,
-        params.ena_metadata_fields ?: '',
-        params.sample_mapping_fields,
-        params.nf_core_pipeline ?: '',
-        params.nf_core_rnaseq_strandedness ?: 'auto',
-        params.download_method,
-        params.skip_fastq_download,
-        params.dbgap_key,
-        params.aspera_cli_args,
-        params.sra_fastq_ftp_args,
-        params.sratools_fasterqdump_args,
-        params.sratools_pigz_args,
-        params.outdir
+        params  
     )
 
 }
@@ -86,7 +76,19 @@ workflow {
     //
     NFCORE_FETCHNGS (
         ids,
-        params,
+        SraParams(
+            params.ena_metadata_fields ?: '',
+            params.sample_mapping_fields,
+            params.nf_core_pipeline ?: '',
+            params.nf_core_rnaseq_strandedness ?: 'auto',
+            params.download_method,
+            params.skip_fastq_download,
+            params.dbgap_key,
+            params.aspera_cli_args,
+            params.sra_fastq_ftp_args,
+            params.sratools_fasterqdump_args,
+            params.sratools_pigz_args
+        )
     )
 
     //

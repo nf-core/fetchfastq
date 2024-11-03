@@ -10,7 +10,7 @@ process SRATOOLS_PREFETCH {
     input:
     meta            : Map
     ncbi_settings   : Path
-    certificate     : Path
+    certificate     : Path?
     prefetch_args   : String = ''
     retry_args      : String = '5 1 100'  // <num retries> <base delay in seconds> <max delay in seconds>
 

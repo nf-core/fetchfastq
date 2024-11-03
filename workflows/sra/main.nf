@@ -22,14 +22,6 @@ include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS } from '../../subworkflow
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT RECORD TYPES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-include { Sample } from '../../types/types'
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
@@ -38,18 +30,7 @@ workflow SRA {
 
     take:
     ids                         : Channel<String>
-    ena_metadata_fields         : String
-    sample_mapping_fields       : String
-    nf_core_pipeline            : String
-    nf_core_rnaseq_strandedness : String
-    download_method             : String // enum: 'aspera' | 'ftp' | 'sratools'
-    skip_fastq_download         : boolean
-    dbgap_key                   : String
-    aspera_cli_args             : String
-    sra_fastq_ftp_args          : String
-    sratools_fasterqdump_args   : String
-    sratools_pigz_args          : String
-    outdir                      : String
+    params                      : SraParams
 
     main:
     ids                                                         // Channel<String>
@@ -57,7 +38,7 @@ workflow SRA {
         // MODULE: Get SRA run information for public database ids
         //
         |> map { id ->
-            SRA_IDS_TO_RUNINFO ( id, ena_metadata_fields )
+            SRA_IDS_TO_RUNINFO ( id, params.ena_metadata_fields )
         }                                                       // Channel<Path>
         //
         // MODULE: Parse SRA run information, create file containing FTP links and read into workflow as [ meta, [reads] ]
@@ -80,11 +61,11 @@ workflow SRA {
         //
         sra_metadata
             |> filter { meta ->
-                getDownloadMethod(meta, download_method) == 'ftp'
+                getDownloadMethod(meta, params.download_method) == 'ftp'
             }                                                   // Channel<Map>
             |> map { meta ->
                 let fastq = [ file(meta.fastq_1), file(meta.fastq_2) ]
-                SRA_FASTQ_FTP ( meta, fastq, sra_fastq_ftp_args )
+                SRA_FASTQ_FTP ( meta, fastq, params.sra_fastq_ftp_args )
             }                                                   // Channel<ProcessOut(meta: Map, fastq: List<Path>, md5: List<Path>)>
             |> set { ftp_samples }                              // Channel<ProcessOut(meta: Map, fastq: List<Path>, md5: List<Path>)>
 
@@ -93,12 +74,12 @@ workflow SRA {
         //
         sra_metadata
             |> filter { meta ->
-                getDownloadMethod(meta, download_method) == 'sratools'
+                getDownloadMethod(meta, params.download_method) == 'sratools'
             }                                                   // Channel<Map>
             |> FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
-                dbgap_key ? file(dbgap_key, checkIfExists: true) : [],
-                sratools_fasterqdump_args,
-                sratools_pigz_args )                            // Channel<ProcessOut(meta: Map, fastq: List<Path>)>
+                params.dbgap_key ? file(params.dbgap_key, checkIfExists: true) : null,
+                params.sratools_fasterqdump_args,
+                params.sratools_pigz_args )                     // Channel<ProcessOut(meta: Map, fastq: List<Path>)>
             |> set { sratools_samples }                         // Channel<ProcessOut(meta: Map, fastq: List<Path>)>
  
         //
@@ -106,11 +87,11 @@ workflow SRA {
         //
         sra_metadata
             |> filter { meta ->
-                getDownloadMethod(meta, download_method) == 'aspera'
+                getDownloadMethod(meta, params.download_method) == 'aspera'
             }                                                   // Channel<Map>
             |> map { meta ->
                 let fastq = meta.fastq_aspera.tokenize(';').take(2).collect { name -> file(name) }
-                ASPERA_CLI ( meta, fastq, 'era-fasp', aspera_cli_args )
+                ASPERA_CLI ( meta, fastq, 'era-fasp', params.aspera_cli_args )
             }                                                   // Channel<ProcessOut(meta: Map, fastq: List<Path>, md5: List<Path>)>
             |> set { aspera_samples }                           // Channel<ProcessOut(meta: Map, fastq: List<Path>, md5: List<Path>)>
 
@@ -146,9 +127,9 @@ workflow SRA {
         |> { sra_metadata ->
             SRA_TO_SAMPLESHEET (
                 sra_metadata,
-                nf_core_pipeline,
-                nf_core_rnaseq_strandedness,
-                sample_mapping_fields )
+                params.nf_core_pipeline,
+                params.nf_core_rnaseq_strandedness,
+                params.sample_mapping_fields )
         }                                                   // ProcessOut(samplesheet: Path, mappings: Path)
         |> set { index_files }                              // ProcessOut(samplesheet: Path, mappings: Path)
 
@@ -207,6 +188,31 @@ fn getDownloadMethod(meta: Map, download_method: String) -> String {
     if ((!meta.fastq_aspera && !meta.fastq_1) || download_method == 'sratools')
         return 'sratools'
     return 'ftp'
+}
+
+/*
+========================================================================================
+    TYPES
+========================================================================================
+*/
+
+record SraParams {
+    ena_metadata_fields         : String
+    sample_mapping_fields       : String
+    nf_core_pipeline            : String
+    nf_core_rnaseq_strandedness : String
+    download_method             : String // enum: 'aspera' | 'ftp' | 'sratools'
+    skip_fastq_download         : boolean
+    dbgap_key                   : String?
+    aspera_cli_args             : String
+    sra_fastq_ftp_args          : String
+    sratools_fasterqdump_args   : String
+    sratools_pigz_args          : String
+}
+
+record Sample {
+    meta    : Map<String,Object>
+    files   : List<Path>
 }
 
 /*

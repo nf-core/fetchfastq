@@ -11,7 +11,7 @@ process SRATOOLS_FASTERQDUMP {
     meta            : Map
     sra             : Path
     ncbi_settings   : Path
-    certificate     : Path
+    certificate     : Path?
     fasterqdump_args: String = '--split-files --include-technical'
     pigz_args       : String = ''
     prefix          : String = ''

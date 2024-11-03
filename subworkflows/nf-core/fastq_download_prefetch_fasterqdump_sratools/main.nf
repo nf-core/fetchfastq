@@ -8,7 +8,7 @@ include { SRATOOLS_FASTERQDUMP        } from '../../../modules/nf-core/sratools/
 workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     take:
     sra_metadata                // Channel<Map>
-    dbgap_key                   // Path
+    dbgap_key                   // Path?
     sratools_fasterqdump_args   // String
     sratools_pigz_args          // String
 
