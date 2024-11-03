@@ -20,34 +20,8 @@ nextflow.preview.types = true
 include { SRA                     } from './workflows/sra'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
+include { SOFTWARE_VERSIONS       } from './subworkflows/nf-core/utils_nfcore_pipeline'
 include { SraParams               } from './workflows/sra'
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    NAMED WORKFLOWS FOR PIPELINE
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-//
-// WORKFLOW: Run main nf-core/fetchngs analysis pipeline depending on type of identifier provided
-//
-workflow NFCORE_FETCHNGS {
-
-    take:
-    ids     : Channel<String>
-    params  : SraParams
-
-    main:
-
-    //
-    // WORKFLOW: Download FastQ files for SRA / ENA / GEO / DDBJ ids
-    //
-    SRA (
-        ids,
-        params  
-    )
-
-}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,6 +31,7 @@ workflow NFCORE_FETCHNGS {
 
 workflow {
 
+    main:
     //
     // SUBWORKFLOW: Run initialisation tasks
     //
@@ -74,13 +49,10 @@ workflow {
     //
     // WORKFLOW: Run primary workflows for the pipeline
     //
-    NFCORE_FETCHNGS (
+    let samples = SRA (
         ids,
         SraParams(
             params.ena_metadata_fields ?: '',
-            params.sample_mapping_fields,
-            params.nf_core_pipeline ?: '',
-            params.nf_core_rnaseq_strandedness ?: 'auto',
             params.download_method,
             params.skip_fastq_download,
             params.dbgap_key,
@@ -90,6 +62,11 @@ workflow {
             params.sratools_pigz_args
         )
     )
+
+    //
+    // SUBWORKFLOW: Collect software versions
+    //
+    let versions = SOFTWARE_VERSIONS()
 
     //
     // SUBWORKFLOW: Run completion tasks
@@ -102,11 +79,39 @@ workflow {
         params.monochrome_logs,
         params.hook_url
     )
+
+    publish:
+    samples >> 'samples'
+    versions >> 'versions'
 }
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    WORKFLOW OUTPUTS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 output {
-    directory params.outdir
-    mode params.publish_dir_mode
+    samples {
+        path { _sample ->
+            let dirs = [
+                'fastq': 'fastq',
+                'md5': 'fastq/md5'
+            ]
+            return { file -> "${dirs[file.ext]}/${file.baseName}" }
+        }
+        index {
+            path 'samplesheet/samplesheet.json'
+            sort { sample -> sample.id }
+        }
+    }
+
+    versions {
+        path '.'
+        index {
+            path 'nf_core_fetchngs_software_mqc_versions.yml'
+        }
+    }
 }
 
 /*

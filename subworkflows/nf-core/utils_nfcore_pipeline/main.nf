@@ -21,6 +21,31 @@ workflow UTILS_NFCORE_PIPELINE {
     valid_config
 }
 
+//
+// Get channel of software versions used in pipeline
+//
+workflow SOFTWARE_VERSIONS {
+    main:
+    let processVersions = Channel.topic('versions', (String,String,String))
+    let workflowVersions = [
+        [ 'Workflow', workflow.manifest.name, getWorkflowVersion() ],
+        [ 'Workflow', 'Nextflow', workflow.nextflow.version ]
+    ]
+    let versions = collect(processVersions) + workflowVersions
+
+    emit:
+    versions                                                // List<(String,String,String)>
+        .unique()                                           // List<(String,String,String)>
+        .groupBy { (process, _, _) -> process }             // List<(String,Bag<(String,String,String)>)>
+        .collect { (process, tools) ->
+            let simpleName = process.tokenize(':').last()
+            let toolsMap = tools.inject([:]) { acc, (_, name, version) ->
+                acc + [ (name): version ]
+            }
+            return [ simpleName: toolsMap ]
+        }                                                   // List<Map<String,Map<String,String>>>
+}
+
 /*
 ========================================================================================
     FUNCTIONS
@@ -86,41 +111,6 @@ fn getWorkflowVersion() -> String {
     }
 
     return version_string
-}
-
-//
-// Get workflow version for pipeline
-//
-fn workflowVersionToYAML() -> String {
-    return """
-    Workflow:
-        $workflow.manifest.name: ${getWorkflowVersion()}
-        Nextflow: $workflow.nextflow.version
-    """.stripIndent().trim()
-}
-
-//
-// Get channel of software versions used in pipeline in YAML format
-//
-workflow softwareVersionsToYAML {
-    take:
-    versions
-
-    main:
-    versions                                                // Channel<Tuple3<String,String,String>>
-        |> unique                                           // Channel<Tuple3<String,String,String>>
-        |> map { process, name, version ->
-            """
-            ${process.tokenize(':').last()}:
-                ${name}: ${version}
-            """.stripIndent().trim()
-        }                                                   // Channel<String>
-        |> unique                                           // Channel<String>
-        |> mix( workflowVersionToYAML() )                   // Channel<String>
-        |> set { versions_yml }
-
-    emit:
-    versions_yml
 }
 
 //
