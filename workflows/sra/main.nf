@@ -45,12 +45,9 @@ workflow SRA {
         |> set { runinfo_ftp }                                  // Channel<Path>
         |> flatMap { tsv ->
             splitCsv(tsv, header:true, sep:'\t')
-        }                                                       // Channel<Map>
-        |> map { meta ->
-            meta + [single_end: meta.single_end.toBoolean()]
-        }                                                       // Channel<Map>
-        |> unique                                               // Channel<Map>
-        |> set { sra_metadata }                                 // Channel<Map>
+        }                                                       // Channel<Map<String,String>>
+        |> unique                                               // Channel<Map<String,String>>
+        |> set { sra_metadata }                                 // Channel<Map<String,String>>
 
     //
     // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums
@@ -58,11 +55,10 @@ workflow SRA {
     sra_metadata
         |> filter { meta ->
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'ftp'
-        }                                                   // Channel<Map>
+        }                                                   // Channel<Map<String,String>>
         |> map { meta ->
-            let fastq = [ file(meta.fastq_1), file(meta.fastq_2) ]
-            let out = SRA_FASTQ_FTP ( meta, fastq, params.sra_fastq_ftp_args )
-            new Sample(out.meta, out.fastq, out.md5)
+            let out = SRA_FASTQ_FTP ( meta, params.sra_fastq_ftp_args )
+            new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
         |> set { ftp_samples }                              // Channel<Sample>
 
@@ -72,13 +68,15 @@ workflow SRA {
     sra_metadata
         |> filter { meta ->
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'sratools'
-        }                                                   // Channel<Map>
+        }                                                   // Channel<Map<String,String>>
         |> FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
             params.dbgap_key ? file(params.dbgap_key, checkIfExists: true) : null,
             params.sratools_fasterqdump_args,
-            params.sratools_pigz_args )                     // Channel<ProcessOut(meta: Map, fastq: List<Path>)>
-        |> map { out ->
-            new Sample(out.meta, out.fastq, [])
+            params.sratools_pigz_args )                     // Channel<(Map<String,String>, List<Path>)>
+        |> map { (meta, fastq) ->
+            let fastq_1 = fastq[0]
+            let fastq_2 = !meta.single_end ? fastq[1] : null
+            new Sample(meta.id, fastq_1, fastq_2, null, null)
         }                                                   // Channel<Sample>
         |> set { sratools_samples }                         // Channel<Sample>
 
@@ -88,28 +86,15 @@ workflow SRA {
     sra_metadata
         |> filter { meta ->
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'aspera'
-        }                                                   // Channel<Map>
+        }                                                   // Channel<Map<String,String>>
         |> map { meta ->
-            let fastq = meta.fastq_aspera.tokenize(';').take(2).collect { name -> file(name) }
-            let out = ASPERA_CLI ( meta, fastq, 'era-fasp', params.aspera_cli_args )
-            new Sample(out.meta, out.fastq, out.md5)
+            let out = ASPERA_CLI ( meta, 'era-fasp', params.aspera_cli_args )
+            new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
         |> set { aspera_samples }                           // Channel<Sample>
 
-    mix( ftp_samples, sratools_samples, aspera_samples )    // Channel<Sample>
-        |> map { sample ->
-            let meta = sample.meta
-            meta + [
-                fastq_1: sample.fastq[0],
-                fastq_2: sample.fastq[1] && !meta.single_end ? sample.fastq[1] : null,
-                md5_1: sample.md5[0],
-                md5_2: sample.md5[1] && !meta.single_end ? sample.md5[1] : null
-            ]
-        }                                                   // Channel<Map>
-        |> set { samples }                                  // Channel<Map>
-
     emit:
-    samples
+    mix( ftp_samples, sratools_samples, aspera_samples )
 
     publish:
     runinfo_ftp >> 'metadata'
@@ -121,7 +106,7 @@ workflow SRA {
 ========================================================================================
 */
 
-fn getDownloadMethod(meta: Map, download_method: String) -> String {
+fn getDownloadMethod(meta: Map<String,String>, download_method: String) -> String {
     // meta.fastq_aspera is a metadata string with ENA fasp links supported by Aspera
         // For single-end: 'fasp.sra.ebi.ac.uk:/vol1/fastq/ERR116/006/ERR1160846/ERR1160846.fastq.gz'
         // For paired-end: 'fasp.sra.ebi.ac.uk:/vol1/fastq/SRR130/020/SRR13055520/SRR13055520_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR130/020/SRR13055520/SRR13055520_2.fastq.gz'
@@ -150,9 +135,11 @@ record SraParams {
 }
 
 record Sample {
-    meta    : Map<String,Object>
-    fastq   : List<Path>
-    md5     : List<Path>
+    id      : String
+    fastq_1 : Path
+    fastq_2 : Path?
+    md5_1   : Path?
+    md5_2   : Path?
 }
 
 /*

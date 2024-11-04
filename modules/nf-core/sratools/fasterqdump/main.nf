@@ -8,7 +8,7 @@ process SRATOOLS_FASTERQDUMP {
         'quay.io/biocontainers/mulled-v2-5f89fe0cd045cb1d615630b9261a1d17943a9b6a:6a9ff0e76ec016c3d0d27e0c0d362339f2d787e6-0' }"
 
     input:
-    meta            : Map
+    meta            : Map<String,String>
     sra             : Path
     ncbi_settings   : Path
     certificate     : Path?
@@ -21,9 +21,9 @@ process SRATOOLS_FASTERQDUMP {
         prefix = "${meta.id}"
     let outfile = meta.single_end ? "${prefix}.fastq" : prefix
     var key_file = ''
-    if (certificate.toString().endsWith('.jwt')) {
+    if (certificate.baseName.endsWith('.jwt')) {
         key_file += " --perm ${certificate}"
-    } else if (certificate.toString().endsWith('.ngc')) {
+    } else if (certificate.baseName.endsWith('.ngc')) {
         key_file += " --ngc ${certificate}"
     }
     """
@@ -44,8 +44,7 @@ process SRATOOLS_FASTERQDUMP {
     """
 
     output:
-    meta
-    fastq = path('*.fastq.gz')
+    files('*.fastq.gz').sort()
 
     topic:
     ( task.process, 'sratools', eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'

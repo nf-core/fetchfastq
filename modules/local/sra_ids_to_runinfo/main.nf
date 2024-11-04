@@ -23,7 +23,7 @@ process SRA_IDS_TO_RUNINFO {
     """
 
     output:
-    path("${id}.runinfo.tsv")
+    file('*.runinfo.tsv')
 
     topic:
     ( task.process, 'python', eval("python --version | sed 's/Python //g'") ) >> 'versions'

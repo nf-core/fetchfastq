@@ -10,17 +10,16 @@ process SRA_FASTQ_FTP {
         'biocontainers/wget:1.20.1' }"
 
     input:
-    meta    : Map
-    fastq   : List<Path>
+    meta    : Map<String,String>
     args    : String
 
     script:
-    if (meta.single_end) {
+    if (meta.single_end.toBoolean()) {
         """
         wget \\
             $args \\
             -O ${meta.id}.fastq.gz \\
-            ${fastq[0]}
+            ${meta.fastq_1}
 
         echo "${meta.md5_1}  ${meta.id}.fastq.gz" > ${meta.id}.fastq.gz.md5
         md5sum -c ${meta.id}.fastq.gz.md5
@@ -30,7 +29,7 @@ process SRA_FASTQ_FTP {
         wget \\
             $args \\
             -O ${meta.id}_1.fastq.gz \\
-            ${fastq[0]}
+            ${meta.fastq_1}
 
         echo "${meta.md5_1}  ${meta.id}_1.fastq.gz" > ${meta.id}_1.fastq.gz.md5
         md5sum -c ${meta.id}_1.fastq.gz.md5
@@ -38,7 +37,7 @@ process SRA_FASTQ_FTP {
         wget \\
             $args \\
             -O ${meta.id}_2.fastq.gz \\
-            ${fastq[1]}
+            ${meta.fastq_2}
 
         echo "${meta.md5_2}  ${meta.id}_2.fastq.gz" > ${meta.id}_2.fastq.gz.md5
         md5sum -c ${meta.id}_2.fastq.gz.md5
@@ -46,9 +45,10 @@ process SRA_FASTQ_FTP {
     }
 
     output:
-    meta    = meta
-    fastq   = path("*fastq.gz")
-    md5     = path("*md5")
+    fastq_1 : Path  = file('*_1.fastq.gz')
+    fastq_2 : Path? = file('*_2.fastq.gz')
+    md5_1   : Path  = file('*_1.fastq.gz.md5')
+    md5_2   : Path? = file('*_2.fastq.gz.md5')
 
     topic:
     ( task.process, 'wget', eval("echo \$(wget --version | head -n 1 | sed 's/^GNU Wget //; s/ .*\$//')") ) >> 'versions'

@@ -22,6 +22,7 @@ include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetc
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { SOFTWARE_VERSIONS       } from './subworkflows/nf-core/utils_nfcore_pipeline'
 include { SraParams               } from './workflows/sra'
+include { Sample                  } from './workflows/sra'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,7 +93,7 @@ workflow {
 */
 
 output {
-    samples {
+    samples: Sample {
         path { _sample ->
             let dirs = [
                 'fastq': 'fastq',
@@ -106,7 +107,7 @@ output {
         }
     }
 
-    versions {
+    versions: Map<String,Map<String,String>> {
         path '.'
         index {
             path 'nf_core_fetchngs_software_mqc_versions.yml'

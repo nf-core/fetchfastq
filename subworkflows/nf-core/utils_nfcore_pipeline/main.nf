@@ -27,23 +27,23 @@ workflow UTILS_NFCORE_PIPELINE {
 workflow SOFTWARE_VERSIONS {
     main:
     let processVersions = Channel.topic('versions', (String,String,String))
-    let workflowVersions = [
+    let workflowVersions = Channel.of(
         [ 'Workflow', workflow.manifest.name, getWorkflowVersion() ],
         [ 'Workflow', 'Nextflow', workflow.nextflow.version ]
-    ]
-    let versions = collect(processVersions) + workflowVersions
+    )
 
     emit:
-    versions                                                // List<(String,String,String)>
-        .unique()                                           // List<(String,String,String)>
-        .groupBy { (process, _, _) -> process }             // List<(String,Bag<(String,String,String)>)>
-        .collect { (process, tools) ->
+    processVersions
+        |> mix(workflowVersions)                            // Channel<(String,String,String)>
+        |> unique                                           // Channel<(String,String,String)>
+        |> groupBy { (process, _, _) -> process }           // Channel<(String,Bag<(String,String,String)>)>
+        |> map { (process, tools) ->
             let simpleName = process.tokenize(':').last()
             let toolsMap = tools.inject([:]) { acc, (_, name, version) ->
                 acc + [ (name): version ]
             }
             return [ simpleName: toolsMap ]
-        }                                                   // List<Map<String,Map<String,String>>>
+        }                                                   // Channel<Map<String,Map<String,String>>>
 }
 
 /*

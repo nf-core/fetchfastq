@@ -8,7 +8,7 @@ process SRATOOLS_PREFETCH {
         'biocontainers/sra-tools:3.0.8--h9f5acd7_0' }"
 
     input:
-    meta            : Map
+    meta            : Map<String,String>
     ncbi_settings   : Path
     certificate     : Path?
     prefetch_args   : String = ''
@@ -17,10 +17,10 @@ process SRATOOLS_PREFETCH {
     shell:
     id = meta.run_accession
     if (certificate) {
-        if (certificate.toString().endsWith('.jwt')) {
+        if (certificate.baseName.endsWith('.jwt')) {
             prefetch_args += " --perm ${certificate}"
         }
-        else if (certificate.toString().endsWith('.ngc')) {
+        else if (certificate.baseName.endsWith('.ngc')) {
             prefetch_args += " --ngc ${certificate}"
         }
     }
@@ -28,7 +28,7 @@ process SRATOOLS_PREFETCH {
     template 'retry_with_backoff.sh'
 
     output:
-    path(id)
+    file(id)
 
     topic:
     ( task.process, 'sratools', eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
