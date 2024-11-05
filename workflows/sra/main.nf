@@ -54,7 +54,7 @@ workflow SRA {
     //
     sra_metadata
         |> filter { meta ->
-            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'ftp'
+            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.FTP
         }                                                   // Channel<Map<String,String>>
         |> map { meta ->
             let out = SRA_FASTQ_FTP ( meta, params.sra_fastq_ftp_args )
@@ -67,10 +67,10 @@ workflow SRA {
     //
     sra_metadata
         |> filter { meta ->
-            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'sratools'
+            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.SRATOOLS
         }                                                   // Channel<Map<String,String>>
         |> FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
-            params.dbgap_key ? file(params.dbgap_key, checkIfExists: true) : null,
+            params.dbgap_key,
             params.sratools_fasterqdump_args,
             params.sratools_pigz_args )                     // Channel<(Map<String,String>, List<Path>)>
         |> map { (meta, fastq) ->
@@ -85,7 +85,7 @@ workflow SRA {
     //
     sra_metadata
         |> filter { meta ->
-            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == 'aspera'
+            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.ASPERA
         }                                                   // Channel<Map<String,String>>
         |> map { meta ->
             let out = ASPERA_CLI ( meta, 'era-fasp', params.aspera_cli_args )
@@ -106,15 +106,15 @@ workflow SRA {
 ========================================================================================
 */
 
-fn getDownloadMethod(meta: Map<String,String>, download_method: String) -> String {
+fn getDownloadMethod(meta: Map<String,String>, userMethod: DownloadMethod) -> DownloadMethod {
     // meta.fastq_aspera is a metadata string with ENA fasp links supported by Aspera
         // For single-end: 'fasp.sra.ebi.ac.uk:/vol1/fastq/ERR116/006/ERR1160846/ERR1160846.fastq.gz'
         // For paired-end: 'fasp.sra.ebi.ac.uk:/vol1/fastq/SRR130/020/SRR13055520/SRR13055520_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR130/020/SRR13055520/SRR13055520_2.fastq.gz'
-    if (meta.fastq_aspera && download_method == 'aspera')
-        return 'aspera'
-    if ((!meta.fastq_aspera && !meta.fastq_1) || download_method == 'sratools')
-        return 'sratools'
-    return 'ftp'
+    if (meta.fastq_aspera && userMethod == DownloadMethod.ASPERA)
+        return DownloadMethod.ASPERA
+    if ((!meta.fastq_aspera && !meta.fastq_1) || userMethod == DownloadMethod.SRATOOLS)
+        return DownloadMethod.SRATOOLS
+    return DownloadMethod.FTP
 }
 
 /*
@@ -125,13 +125,19 @@ fn getDownloadMethod(meta: Map<String,String>, download_method: String) -> Strin
 
 record SraParams {
     ena_metadata_fields         : String
-    download_method             : String // enum: 'aspera' | 'ftp' | 'sratools'
+    download_method             : DownloadMethod
     skip_fastq_download         : boolean
-    dbgap_key                   : String?
+    dbgap_key                   : Path?
     aspera_cli_args             : String
     sra_fastq_ftp_args          : String
     sratools_fasterqdump_args   : String
     sratools_pigz_args          : String
+}
+
+enum DownloadMethod {
+    ASPERA,
+    FTP,
+    SRATOOLS
 }
 
 record Sample {

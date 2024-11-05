@@ -35,8 +35,6 @@ workflow PIPELINE_INITIALISATION {
     monochrome_logs     : boolean   // Do not use coloured log outputs
     nextflow_cli_args   : List      // List of positional nextflow CLI args
     outdir              : String    // The output directory where the results will be saved
-    input               : String    // File containing SRA/ENA/GEO/DDBJ identifiers one per line to download their associated metadata and FastQ files
-    ena_metadata_fields : String    // Comma-separated list of ENA metadata fields to fetch before downloading data
 
     main:
 
@@ -55,7 +53,7 @@ workflow PIPELINE_INITIALISATION {
     //
     let pre_help_text = nfCoreLogo(monochrome_logs)
     let post_help_text = '\n' + workflowCitation() + '\n' + dashedLine(monochrome_logs)
-    let workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv --outdir <OUTDIR>"
+    let workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv -output-dir <OUTDIR>"
     UTILS_NFVALIDATION_PLUGIN (
         help,
         workflow_command,
@@ -71,26 +69,6 @@ workflow PIPELINE_INITIALISATION {
     UTILS_NFCORE_PIPELINE (
         nextflow_cli_args
     )
-
-    //
-    // Auto-detect input id type
-    //
-    let inputPath = file(input)
-    if (!isSraId(inputPath))
-        error('Ids provided via --input not recognised please make sure they are either SRA / ENA / GEO / DDBJ ids!')
-    sraCheckENAMetadataFields(ena_metadata_fields)
-
-    // Read in ids from --input file
-    inputPath                                               // Path
-        |> Channel.of                                       // Channel<Path>
-        |> flatMap { csv ->
-            splitCsv(csv, header: false, schema: 'assets/schema_input.json')
-        }                                                   // Channel<String>
-        |> unique                                           // Channel<String>
-        |> set { ids }                                      // Channel<String>
-
-    emit:
-    ids     // Channel<String>
 }
 
 /*

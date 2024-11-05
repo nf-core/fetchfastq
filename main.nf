@@ -21,8 +21,72 @@ include { SRA                     } from './workflows/sra'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { SOFTWARE_VERSIONS       } from './subworkflows/nf-core/utils_nfcore_pipeline'
+include { DownloadMethod          } from './workflows/sra'
 include { SraParams               } from './workflows/sra'
 include { Sample                  } from './workflows/sra'
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    WORKFLOW INPUTS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+params {
+
+    // TODO: declare as Set<SraId> and construct SraId with isSraId()
+    input: Set<String> {
+        description 'Set of SRA/ENA/GEO/DDBJ identifiers to download their associated metadata and FastQ files'
+    }
+
+    // TODO: declare as EnaMetadataFields and construct with sraCheckENAMetadataFields()
+    ena_metadata_fields: String {
+        description "Comma-separated list of ENA metadata fields to fetch before downloading data."
+        help "The default list of fields used by the pipeline can be found at the top of the [`bin/sra_ids_to_runinfo.py`](https://github.com/nf-core/fetchngs/blob/master/bin/sra_ids_to_runinfo.py) script within the pipeline repo. This pipeline requires a minimal set of fields to download FastQ files i.e. `'run_accession,experiment_accession,library_layout,fastq_ftp,fastq_md5'`. Full list of accepted metadata fields can be obtained from the [ENA API](https://www.ebi.ac.uk/ena/portal/api/returnFields?dataPortal=ena&format=tsv&result=read_run)."
+        icon 'fas fa-columns'
+        defaultValue ''
+    }
+
+    download_method: DownloadMethod {
+        description "Method to download FastQ files. Available options are 'aspera', 'ftp' or 'sratools'. Default is 'ftp'."
+        help 'FTP and Aspera CLI download FastQ files directly from the ENA FTP whereas sratools uses sra-tools to download *.sra files and convert to FastQ.'
+        icon 'fas fa-download'
+        defaultValue 'ftp'
+    }
+
+    skip_fastq_download: boolean {
+        description "Only download metadata for public data database ids and don't download the FastQ files."
+        icon 'fas fa-fast-forward'
+    }
+
+    dbgap_key: Path? {
+        description 'dbGaP repository key.'
+        help 'Path to a JWT cart file used to access protected dbGAP data on SRA using the sra-toolkit. Users with granted access to controlled data can download the JWT cart file for the study from the SRA Run Selector upon logging in. The JWT file can only be used on cloud platforms and is valid for 1 hour upon creation.'
+        icon 'fas fa-address-card'
+    }
+
+    aspera_cli_args: String {
+        description 'Command-line arguments for Aspera CLI'
+        defaultValue ''
+    }
+
+    sra_fastq_ftp_args: String {
+        description 'Command-line arguments for wget when downloading fastq files via FTP'
+        defaultValue ''
+    }
+
+    sratools_fasterqdump_args: String {
+        description 'Command-line arguments for sratools fasterqdump'
+        defaultValue ''
+    }
+
+    sratools_pigz_args: String {
+        description 'Command-line arguments for sratools pigz'
+        defaultValue ''
+    }
+
+    // TODO: ...
+
+}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,24 +100,22 @@ workflow {
     //
     // SUBWORKFLOW: Run initialisation tasks
     //
-    let ids = PIPELINE_INITIALISATION (
+    PIPELINE_INITIALISATION (
         params.version,
         params.help,
         params.validate_params,
         params.monochrome_logs,
         args,
-        params.outdir,
-        params.input,
-        params.ena_metadata_fields
+        workflow.outputDir
     )
 
     //
     // WORKFLOW: Run primary workflows for the pipeline
     //
     let samples = SRA (
-        ids,
+        Channel.fromList(params.input),
         SraParams(
-            params.ena_metadata_fields ?: '',
+            params.ena_metadata_fields,
             params.download_method,
             params.skip_fastq_download,
             params.dbgap_key,
@@ -76,7 +138,7 @@ workflow {
         params.email,
         params.email_on_fail,
         params.plaintext_email,
-        params.outdir,
+        workflow.outputDir,
         params.monochrome_logs,
         params.hook_url
     )
