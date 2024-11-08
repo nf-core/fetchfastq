@@ -7,18 +7,18 @@ include { SRATOOLS_FASTERQDUMP        } from '../../../modules/nf-core/sratools/
 //
 workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     take:
-    sra_metadata                // Channel<Map<String,String>>
-    dbgap_key                   // Path?
-    sratools_fasterqdump_args   // String
-    sratools_pigz_args          // String
+    sra_metadata                : Channel<Map<String,String>>
+    dbgap_key                   : Path?
+    sratools_fasterqdump_args   : String
+    sratools_pigz_args          : String
 
     main:
     //
     // Detect existing NCBI user settings or create new ones.
     //
-    def ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS( collect(sra_metadata) )
+    def ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS( sra_metadata.collect() )
 
-    def reads = sra_metadata |> map { meta ->
+    def reads = sra_metadata.map { meta ->
         //
         // Prefetch sequencing reads in SRA format.
         //
@@ -39,8 +39,8 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
             sratools_pigz_args )
 
         ( meta, fastq )
-    }                                                   // Channel<(Map<String,String>, List<Path>)>
+    }
 
     emit:
-    reads   // Channel<(Map<String,String>, List<Path>)>
+    reads   : Channel<(Map<String,String>, List<Path>)>
 }

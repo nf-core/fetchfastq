@@ -34,11 +34,11 @@ workflow SOFTWARE_VERSIONS {
 
     emit:
     processVersions
-        |> mix(workflowVersions)                            // Channel<(String,String,String)>
-        |> gather { (process, name, version) ->
+        .mix(workflowVersions)                              // Channel<(String,String,String)>
+        .gather { (process, name, version) ->
             (process, -1, (name, version))
         }                                                   // Channel<(String,Bag<(String,String)>)>
-        |> map { (process, tools) ->
+        .map { (process, tools) ->
             def simpleName = process.tokenize(':').last()
             def toolsMap = tools.unique().inject([:]) { acc, (name, version) ->
                 acc + [ (name): version ]

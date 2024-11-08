@@ -27,23 +27,23 @@ include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS } from '../../subworkflow
 workflow SRA {
 
     take:
-    ids                         : Channel<String>
-    params                      : SraParams
+    ids     : Channel<String>
+    params  : SraParams
 
     main:
     def runinfo_ftp = ids
         //
         // MODULE: Get SRA run information for public database ids
         //
-        |> map { id ->
+        .map { id ->
             SRA_IDS_TO_RUNINFO ( id, params.ena_metadata_fields )
         }                                                   // Channel<Path>
         //
         // MODULE: Parse SRA run information, create file containing FTP links and read into workflow as [ meta, [reads] ]
         //
-        |> map(SRA_RUNINFO_TO_FTP)                          // Channel<Path>
+        .map(SRA_RUNINFO_TO_FTP)                            // Channel<Path>
 
-    def sra_metadata = runinfo_ftp |> scatter { tsv ->
+    def sra_metadata = runinfo_ftp.scatter { tsv ->
         tsv.splitCsv(header:true, sep:'\t').unique()
     }                                                       // Channel<Map<String,String>>
 
@@ -51,10 +51,10 @@ workflow SRA {
     // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums
     //
     def ftp_samples = sra_metadata
-        |> filter { meta ->
+        .filter { meta ->
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.FTP
         }                                                   // Channel<Map<String,String>>
-        |> map { meta ->
+        .map { meta ->
             def out = SRA_FASTQ_FTP ( meta, params.sra_fastq_ftp_args )
             new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
@@ -62,34 +62,39 @@ workflow SRA {
     //
     // SUBWORKFLOW: Download sequencing reads without FTP links using sra-tools.
     //
-    def sratools_samples = sra_metadata
-        |> filter { meta ->
-            !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.SRATOOLS
-        }                                                   // Channel<Map<String,String>>
-        |> FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
-            params.dbgap_key,
-            params.sratools_fasterqdump_args,
-            params.sratools_pigz_args )                     // Channel<(Map<String,String>, List<Path>)>
-        |> map { (meta, fastq) ->
-            def fastq_1 = fastq[0]
-            def fastq_2 = !meta.single_end ? fastq[1] : null
-            new Sample(meta.id, fastq_1, fastq_2, null, null)
-        }                                                   // Channel<Sample>
+    def sratools_metadata = sra_metadata.filter { meta ->
+        !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.SRATOOLS
+    }                                                       // Channel<Map<String,String>>
+
+    def sratools_reads = FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
+        sratools_metadata,
+        params.dbgap_key,
+        params.sratools_fasterqdump_args,
+        params.sratools_pigz_args
+    )                                                       // Channel<(Map<String,String>, List<Path>)>
+
+    def sratools_samples = sra_metadata.map { (meta, fastq) ->
+        def fastq_1 = fastq[0]
+        def fastq_2 = !meta.single_end ? fastq[1] : null
+        new Sample(meta.id, fastq_1, fastq_2, null, null)
+    }                                                       // Channel<Sample>
 
     //
     // MODULE: If Aspera link is provided in run information then download FastQ directly via Aspera CLI and validate with md5sums
     //
     def aspera_samples = sra_metadata
-        |> filter { meta ->
+        .filter { meta ->
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.ASPERA
         }                                                   // Channel<Map<String,String>>
-        |> map { meta ->
+        .map { meta ->
             def out = ASPERA_CLI ( meta, 'era-fasp', params.aspera_cli_args )
             new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
 
     emit:
-    mix( ftp_samples, sratools_samples, aspera_samples )
+    ftp_samples
+        .mix(sratools_samples)
+        .mix(aspera_samples)
 
     publish:
     runinfo_ftp >> 'metadata'
