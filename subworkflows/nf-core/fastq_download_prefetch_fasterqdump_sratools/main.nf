@@ -16,35 +16,30 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     //
     // Detect existing NCBI user settings or create new ones.
     //
-    sra_metadata                                            // Channel<Map<String,String>>
-        |> collect                                          // Bag<Map<String,String>> (future)
-        |> CUSTOM_SRATOOLSNCBISETTINGS                      // Path (future)
-        |> set { ncbi_settings }                            // Path (future)
+    let ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS( collect(sra_metadata) )
 
-    sra_metadata                                            // Channel<Map<String,String>>
-        |> map { meta ->
-            //
-            // Prefetch sequencing reads in SRA format.
-            //
-            let sra = SRATOOLS_PREFETCH (
-                meta,
-                ncbi_settings,
-                dbgap_key )
+    let reads = sra_metadata |> map { meta ->
+        //
+        // Prefetch sequencing reads in SRA format.
+        //
+        let sra = SRATOOLS_PREFETCH (
+            meta,
+            ncbi_settings,
+            dbgap_key )
 
-            //
-            // Convert the SRA format into one or more compressed FASTQ files.
-            //
-            let fastq = SRATOOLS_FASTERQDUMP (
-                meta,
-                sra,
-                ncbi_settings,
-                dbgap_key,
-                sratools_fasterqdump_args,
-                sratools_pigz_args )
+        //
+        // Convert the SRA format into one or more compressed FASTQ files.
+        //
+        let fastq = SRATOOLS_FASTERQDUMP (
+            meta,
+            sra,
+            ncbi_settings,
+            dbgap_key,
+            sratools_fasterqdump_args,
+            sratools_pigz_args )
 
-            ( meta, fastq )
-        }                                                   // Channel<(Map<String,String>, List<Path>)>
-        |> set { reads }                                    // Channel<(Map<String,String>, List<Path>)>
+        ( meta, fastq )
+    }                                                   // Channel<(Map<String,String>, List<Path>)>
 
     emit:
     reads   // Channel<(Map<String,String>, List<Path>)>
