@@ -37,17 +37,15 @@ workflow SRA {
         //
         |> map { id ->
             SRA_IDS_TO_RUNINFO ( id, params.ena_metadata_fields )
-        }                                                       // Channel<Path>
+        }                                                   // Channel<Path>
         //
         // MODULE: Parse SRA run information, create file containing FTP links and read into workflow as [ meta, [reads] ]
         //
-        |> map(SRA_RUNINFO_TO_FTP)                              // Channel<Path>
+        |> map(SRA_RUNINFO_TO_FTP)                          // Channel<Path>
 
-    let sra_metadata = runinfo_ftp
-        |> flatMap { tsv ->
-            splitCsv(tsv, header:true, sep:'\t')
-        }                                                       // Channel<Map<String,String>>
-        |> unique                                               // Channel<Map<String,String>>
+    let sra_metadata = runinfo_ftp |> scatter { tsv ->
+        tsv.splitCsv(header:true, sep:'\t').unique()
+    }                                                       // Channel<Map<String,String>>
 
     //
     // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums

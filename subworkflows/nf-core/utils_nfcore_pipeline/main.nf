@@ -28,18 +28,19 @@ workflow SOFTWARE_VERSIONS {
     main:
     let processVersions = Channel.topic('versions', (String,String,String))
     let workflowVersions = Channel.of(
-        [ 'Workflow', workflow.manifest.name, getWorkflowVersion() ],
-        [ 'Workflow', 'Nextflow', workflow.nextflow.version ]
+        ( 'Workflow', workflow.manifest.name, getWorkflowVersion() ),
+        ( 'Workflow', 'Nextflow', workflow.nextflow.version )
     )
 
     emit:
     processVersions
         |> mix(workflowVersions)                            // Channel<(String,String,String)>
-        |> unique                                           // Channel<(String,String,String)>
-        |> groupBy { (process, _, _) -> process }           // Channel<(String,Bag<(String,String,String)>)>
+        |> gather { (process, name, version) ->
+            (process, -1, (name, version))
+        }                                                   // Channel<(String,Bag<(String,String)>)>
         |> map { (process, tools) ->
             let simpleName = process.tokenize(':').last()
-            let toolsMap = tools.inject([:]) { acc, (_, name, version) ->
+            let toolsMap = tools.unique().inject([:]) { acc, (name, version) ->
                 acc + [ (name): version ]
             }
             return [ simpleName: toolsMap ]
