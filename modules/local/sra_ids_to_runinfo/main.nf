@@ -13,7 +13,7 @@ process SRA_IDS_TO_RUNINFO {
     fields  : String
 
     script:
-    let metadata_fields = fields ? "--ena_metadata_fields ${fields}" : ''
+    def metadata_fields = fields ? "--ena_metadata_fields ${fields}" : ''
     """
     echo $id > id.txt
     sra_ids_to_runinfo.py \\

@@ -57,15 +57,15 @@ workflow UTILS_NEXTFLOW_PIPELINE {
 //
 // Generate version string
 //
-fn getWorkflowVersion() -> String {
-    var version_string = ""
+def getWorkflowVersion() -> String {
+    def version_string = ""
     if (workflow.manifest.version) {
-        let prefix_v = workflow.manifest.version[0] != 'v' ? 'v' : ''
+        def prefix_v = workflow.manifest.version[0] != 'v' ? 'v' : ''
         version_string += "${prefix_v}${workflow.manifest.version}"
     }
 
     if (workflow.commitId) {
-        let git_shortsha = workflow.commitId.substring(0, 7)
+        def git_shortsha = workflow.commitId.substring(0, 7)
         version_string += "-g${git_shortsha}"
     }
 
@@ -75,11 +75,11 @@ fn getWorkflowVersion() -> String {
 //
 // Dump pipeline parameters to a JSON file
 //
-fn dumpParametersToJSON(outdir: String) {
-    let timestamp  = new java.util.Date().format( 'yyyy-MM-dd_HH-mm-ss')
-    let filename   = "params_${timestamp}.json"
-    let temp_pf    = new File(workflow.launchDir.toString(), ".${filename}")
-    let jsonStr    = JsonOutput.toJson(params)
+def dumpParametersToJSON(outdir: String) {
+    def timestamp  = new java.util.Date().format( 'yyyy-MM-dd_HH-mm-ss')
+    def filename   = "params_${timestamp}.json"
+    def temp_pf    = new File(workflow.launchDir.toString(), ".${filename}")
+    def jsonStr    = JsonOutput.toJson(params)
     temp_pf.text   = JsonOutput.prettyPrint(jsonStr)
 
     FilesEx.copyTo(temp_pf.toPath(), "${outdir}/pipeline_info/params_${timestamp}.json")
@@ -89,11 +89,11 @@ fn dumpParametersToJSON(outdir: String) {
 //
 // When running with -profile conda, warn if channels have not been set-up appropriately
 //
-fn checkCondaChannels() {
-    let parser = new Yaml()
-    var channels: Set = []
+def checkCondaChannels() {
+    def parser = new Yaml()
+    def channels: Set = []
     try {
-        let config = parser.load("conda config --show channels".execute().text)
+        def config = parser.load("conda config --show channels".execute().text)
         channels = config.channels
     } catch(NullPointerException | IOException e) {
         log.warn "Could not verify conda channel configuration."
@@ -102,12 +102,12 @@ fn checkCondaChannels() {
 
     // Check that all channels are present
     // This channel list is ordered by required channel priority.
-    let required_channels_in_order: Set = ['conda-forge', 'bioconda', 'defaults']
-    let channels_missing = !(required_channels_in_order - channels).isEmpty()
+    def required_channels_in_order: Set = ['conda-forge', 'bioconda', 'defaults']
+    def channels_missing = !(required_channels_in_order - channels).isEmpty()
 
     // Check that they are in the right order
-    let channel_priority_violation = false
-    let n = required_channels_in_order.size()
+    def channel_priority_violation = false
+    def n = required_channels_in_order.size()
     // for (int i = 0; i < n - 1; i++) {
     //     channel_priority_violation |= !(channels.indexOf(required_channels_in_order[i]) < channels.indexOf(required_channels_in_order[i+1]))
     // }

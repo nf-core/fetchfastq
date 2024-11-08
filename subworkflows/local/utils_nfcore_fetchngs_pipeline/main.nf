@@ -51,9 +51,9 @@ workflow PIPELINE_INITIALISATION {
     //
     // Validate parameters and generate parameter summary to stdout
     //
-    let pre_help_text = nfCoreLogo(monochrome_logs)
-    let post_help_text = '\n' + workflowCitation() + '\n' + dashedLine(monochrome_logs)
-    let workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv -output-dir <OUTDIR>"
+    def pre_help_text = nfCoreLogo(monochrome_logs)
+    def post_help_text = '\n' + workflowCitation() + '\n' + dashedLine(monochrome_logs)
+    def workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv -output-dir <OUTDIR>"
     UTILS_NFVALIDATION_PLUGIN (
         help,
         workflow_command,
@@ -89,7 +89,7 @@ workflow PIPELINE_COMPLETION {
 
     main:
 
-    let summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
+    def summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
 
     //
     // Completion email and summary
@@ -118,11 +118,11 @@ workflow PIPELINE_COMPLETION {
 //
 // Check if input ids are from the SRA
 //
-fn isSraId(input: Path) -> boolean {
-    var is_sra = false
-    var total_ids = 0
-    let no_match_ids = []
-    let pattern = /^(((SR|ER|DR)[APRSX])|(SAM(N|EA|D))|(PRJ(NA|EB|DB))|(GS[EM]))(\d+)$/
+def isSraId(input: Path) -> boolean {
+    def is_sra = false
+    def total_ids = 0
+    def no_match_ids = []
+    def pattern = /^(((SR|ER|DR)[APRSX])|(SAM(N|EA|D))|(PRJ(NA|EB|DB))|(GS[EM]))(\d+)$/
     input.eachLine { line ->
         total_ids += 1
         if (!(line =~ pattern)) {
@@ -130,7 +130,7 @@ fn isSraId(input: Path) -> boolean {
         }
     }
 
-    let num_match = total_ids - no_match_ids.size()
+    def num_match = total_ids - no_match_ids.size()
     if (num_match > 0) {
         if (num_match == total_ids) {
             is_sra = true
@@ -144,10 +144,10 @@ fn isSraId(input: Path) -> boolean {
 //
 // Check and validate parameters
 //
-fn sraCheckENAMetadataFields(ena_metadata_fields) {
+def sraCheckENAMetadataFields(ena_metadata_fields) {
     // Check minimal ENA fields are provided to download FastQ files
-    let valid_ena_metadata_fields = ['run_accession', 'experiment_accession', 'library_layout', 'fastq_ftp', 'fastq_md5']
-    let actual_ena_metadata_fields = ena_metadata_fields ? ena_metadata_fields.split(',').collect{ it.trim().toLowerCase() } : valid_ena_metadata_fields
+    def valid_ena_metadata_fields = ['run_accession', 'experiment_accession', 'library_layout', 'fastq_ftp', 'fastq_md5']
+    def actual_ena_metadata_fields = ena_metadata_fields ? ena_metadata_fields.split(',').collect{ it.trim().toLowerCase() } : valid_ena_metadata_fields
     if (!actual_ena_metadata_fields.containsAll(valid_ena_metadata_fields)) {
         error("Invalid option: '${ena_metadata_fields}'. Minimally required fields for '--ena_metadata_fields': '${valid_ena_metadata_fields.join(',')}'")
     }
@@ -156,7 +156,7 @@ fn sraCheckENAMetadataFields(ena_metadata_fields) {
 //
 // Print a warning after pipeline has completed
 //
-fn sraCurateSamplesheetWarn() {
+def sraCurateSamplesheetWarn() {
     log.warn "=============================================================================\n" +
         "  Please double-check the samplesheet that has been auto-created by the pipeline.\n\n" +
         "  Public databases don't reliably hold information such as strandedness\n" +

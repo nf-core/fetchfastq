@@ -16,13 +16,13 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     //
     // Detect existing NCBI user settings or create new ones.
     //
-    let ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS( collect(sra_metadata) )
+    def ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS( collect(sra_metadata) )
 
-    let reads = sra_metadata |> map { meta ->
+    def reads = sra_metadata |> map { meta ->
         //
         // Prefetch sequencing reads in SRA format.
         //
-        let sra = SRATOOLS_PREFETCH (
+        def sra = SRATOOLS_PREFETCH (
             meta,
             ncbi_settings,
             dbgap_key )
@@ -30,7 +30,7 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
         //
         // Convert the SRA format into one or more compressed FASTQ files.
         //
-        let fastq = SRATOOLS_FASTERQDUMP (
+        def fastq = SRATOOLS_FASTERQDUMP (
             meta,
             sra,
             ncbi_settings,

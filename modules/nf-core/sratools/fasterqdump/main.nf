@@ -19,8 +19,8 @@ process SRATOOLS_FASTERQDUMP {
     script:
     if( !prefix )
         prefix = "${meta.id}"
-    let outfile = meta.single_end ? "${prefix}.fastq" : prefix
-    var key_file = ''
+    def outfile = meta.single_end ? "${prefix}.fastq" : prefix
+    def key_file = ''
     if (certificate.baseName.endsWith('.jwt')) {
         key_file += " --perm ${certificate}"
     } else if (certificate.baseName.endsWith('.ngc')) {

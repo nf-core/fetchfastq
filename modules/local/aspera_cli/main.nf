@@ -13,8 +13,8 @@ process ASPERA_CLI {
     args    : String
 
     script:
-    let conda_prefix = ['singularity', 'apptainer'].contains(workflow.containerEngine) ? "export CONDA_PREFIX=/usr/local" : ""
-    let fastq = meta.fastq_aspera.tokenize(';')
+    def conda_prefix = ['singularity', 'apptainer'].contains(workflow.containerEngine) ? "export CONDA_PREFIX=/usr/local" : ""
+    def fastq = meta.fastq_aspera.tokenize(';')
     if (meta.single_end.toBoolean()) {
         """
         $conda_prefix

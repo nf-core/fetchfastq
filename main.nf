@@ -112,7 +112,7 @@ workflow {
     //
     // WORKFLOW: Run primary workflows for the pipeline
     //
-    let samples = SRA (
+    def samples = SRA (
         Channel.fromList(params.input),
         SraParams(
             params.ena_metadata_fields,
@@ -129,7 +129,7 @@ workflow {
     //
     // SUBWORKFLOW: Collect software versions
     //
-    let versions = SOFTWARE_VERSIONS()
+    def versions = SOFTWARE_VERSIONS()
 
     //
     // SUBWORKFLOW: Run completion tasks
@@ -157,7 +157,7 @@ workflow {
 output {
     samples: Sample {
         path { _sample ->
-            let dirs = [
+            def dirs = [
                 'fastq': 'fastq',
                 'md5': 'fastq/md5'
             ]

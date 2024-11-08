@@ -26,8 +26,8 @@ workflow UTILS_NFCORE_PIPELINE {
 //
 workflow SOFTWARE_VERSIONS {
     main:
-    let processVersions = Channel.topic('versions', (String,String,String))
-    let workflowVersions = Channel.of(
+    def processVersions = Channel.topic('versions', (String,String,String))
+    def workflowVersions = Channel.of(
         ( 'Workflow', workflow.manifest.name, getWorkflowVersion() ),
         ( 'Workflow', 'Nextflow', workflow.nextflow.version )
     )
@@ -39,8 +39,8 @@ workflow SOFTWARE_VERSIONS {
             (process, -1, (name, version))
         }                                                   // Channel<(String,Bag<(String,String)>)>
         |> map { (process, tools) ->
-            let simpleName = process.tokenize(':').last()
-            let toolsMap = tools.unique().inject([:]) { acc, (name, version) ->
+            def simpleName = process.tokenize(':').last()
+            def toolsMap = tools.unique().inject([:]) { acc, (name, version) ->
                 acc + [ (name): version ]
             }
             return [ simpleName: toolsMap ]
@@ -56,7 +56,7 @@ workflow SOFTWARE_VERSIONS {
 //
 //  Warn if a -profile or Nextflow config has not been provided to run the pipeline
 //
-fn checkConfigProvided() -> boolean {
+def checkConfigProvided() -> boolean {
     if (workflow.profile == 'standard' && workflow.configFiles.size() <= 1) {
         log.warn "[$workflow.manifest.name] You are attempting to run the pipeline without any custom configuration!\n\n" +
             "This will be dependent on your local compute environment but can be achieved via one or more of the following:\n" +
@@ -72,7 +72,7 @@ fn checkConfigProvided() -> boolean {
 //
 // Exit pipeline if --profile contains spaces
 //
-fn checkProfileProvided(nextflow_cli_args: List<String>) {
+def checkProfileProvided(nextflow_cli_args: List<String>) {
     if (workflow.profile.endsWith(',')) {
         error "The `-profile` option cannot end with a trailing comma, please remove it and re-run the pipeline!\n" +
             "HINT: A common mistake is to provide multiple values separated by spaces e.g. `-profile test, docker`.\n"
@@ -86,7 +86,7 @@ fn checkProfileProvided(nextflow_cli_args: List<String>) {
 //
 // Citation string for pipeline
 //
-fn workflowCitation() -> String {
+def workflowCitation() -> String {
     return "If you use ${workflow.manifest.name} for your analysis please cite:\n\n" +
         "* The pipeline\n" +
         "  ${workflow.manifest.doi}\n\n" +
@@ -99,15 +99,15 @@ fn workflowCitation() -> String {
 //
 // Generate workflow version string
 //
-fn getWorkflowVersion() -> String {
-    var version_string = ""
+def getWorkflowVersion() -> String {
+    def version_string = ""
     if (workflow.manifest.version) {
-        let prefix_v = workflow.manifest.version[0] != 'v' ? 'v' : ''
+        def prefix_v = workflow.manifest.version[0] != 'v' ? 'v' : ''
         version_string += "${prefix_v}${workflow.manifest.version}"
     }
 
     if (workflow.commitId) {
-        let git_shortsha = workflow.commitId.substring(0, 7)
+        def git_shortsha = workflow.commitId.substring(0, 7)
         version_string += "-g${git_shortsha}"
     }
 
@@ -117,10 +117,10 @@ fn getWorkflowVersion() -> String {
 //
 // Get workflow summary for MultiQC
 //
-fn paramsSummaryMultiqc(summary_params: Map) -> String {
-    var summary_section = ''
+def paramsSummaryMultiqc(summary_params: Map) -> String {
+    def summary_section = ''
     for (group in summary_params.keySet()) {
-        let group_params = summary_params.get(group)  // This gets the parameters of that particular group
+        def group_params = summary_params.get(group)  // This gets the parameters of that particular group
         if (group_params) {
             summary_section += "    <p style=\"font-size:110%\"><b>$group</b></p>\n"
             summary_section += "    <dl class=\"dl-horizontal\">\n"
@@ -131,7 +131,7 @@ fn paramsSummaryMultiqc(summary_params: Map) -> String {
         }
     }
 
-    var yaml_file_text  = "id: '${workflow.manifest.name.replace('/','-')}-summary'\n"
+    def yaml_file_text  = "id: '${workflow.manifest.name.replace('/','-')}-summary'\n"
     yaml_file_text        += "description: ' - this information is collected when the pipeline is started.'\n"
     yaml_file_text        += "section_name: '${workflow.manifest.name} Workflow Summary'\n"
     yaml_file_text        += "section_href: 'https://github.com/${workflow.manifest.name}'\n"
@@ -145,8 +145,8 @@ fn paramsSummaryMultiqc(summary_params: Map) -> String {
 //
 // nf-core logo
 //
-fn nfCoreLogo(monochrome_logs: boolean = true) -> String {
-    let colors = logColours(monochrome_logs)
+def nfCoreLogo(monochrome_logs: boolean = true) -> String {
+    def colors = logColours(monochrome_logs)
     String.format(
         """\n
         ${dashedLine(monochrome_logs)}
@@ -164,16 +164,16 @@ fn nfCoreLogo(monochrome_logs: boolean = true) -> String {
 //
 // Return dashed line
 //
-fn dashedLine(monochrome_logs: boolean = true) -> String {
-    let colors = logColours(monochrome_logs)
+def dashedLine(monochrome_logs: boolean = true) -> String {
+    def colors = logColours(monochrome_logs)
     return "-${colors.dim}----------------------------------------------------${colors.reset}-"
 }
 
 //
 // ANSII colours used for terminal logging
 //
-fn logColours(monochrome_logs: boolean = true) -> Map<String,String> {
-    let colorcodes = [:]
+def logColours(monochrome_logs: boolean = true) -> Map<String,String> {
+    def colorcodes = [:]
 
     // Reset / Meta
     colorcodes['reset']      = monochrome_logs ? '' : "\033[0m"
@@ -240,7 +240,7 @@ fn logColours(monochrome_logs: boolean = true) -> Map<String,String> {
 //
 // Construct and send completion email
 //
-fn completionEmail(
+def completionEmail(
         summary_params: Map,
         email: String,
         email_on_fail: String,
@@ -250,16 +250,16 @@ fn completionEmail(
         multiqc_report: Path = null) {
 
     // Set up the e-mail variables
-    let subject = workflow.success
+    def subject = workflow.success
         ? "[$workflow.manifest.name] Successful: $workflow.runName"
         : "[$workflow.manifest.name] FAILED: $workflow.runName"
 
-    let summary = [:]
+    def summary = [:]
     for (group in summary_params.keySet()) {
         summary << summary_params[group]
     }
 
-    let misc_fields = [:]
+    def misc_fields = [:]
     misc_fields['Date Started']              = workflow.start
     misc_fields['Date Completed']            = workflow.complete
     misc_fields['Pipeline script file path'] = workflow.scriptFile
@@ -271,7 +271,7 @@ fn completionEmail(
     misc_fields['Nextflow Build']             = workflow.nextflow.build
     misc_fields['Nextflow Compile Timestamp'] = workflow.nextflow.timestamp
 
-    let email_fields = [:]
+    def email_fields = [:]
     email_fields['version']      = getWorkflowVersion()
     email_fields['runName']      = workflow.runName
     email_fields['success']      = workflow.success
@@ -285,59 +285,59 @@ fn completionEmail(
     email_fields['summary']      = summary << misc_fields
 
     // On success try attach the multiqc report
-    let mqc_report = workflow.success
+    def mqc_report = workflow.success
         ? multiqc_report
         : null
 
     // Check if we are only sending emails on failure
-    let email_address = !email && email_on_fail && !workflow.success
+    def email_address = !email && email_on_fail && !workflow.success
         ? email_on_fail
         : email
 
     // Render the TXT template
-    let engine       = new groovy.text.GStringTemplateEngine()
-    let tf           = new File("${workflow.projectDir}/assets/email_template.txt")
-    let txt_template = engine.createTemplate(tf).make(email_fields)
-    let email_txt    = txt_template.toString()
+    def engine       = new groovy.text.GStringTemplateEngine()
+    def tf           = new File("${workflow.projectDir}/assets/email_template.txt")
+    def txt_template = engine.createTemplate(tf).make(email_fields)
+    def email_txt    = txt_template.toString()
 
     // Render the HTML template
-    let hf            = new File("${workflow.projectDir}/assets/email_template.html")
-    let html_template = engine.createTemplate(hf).make(email_fields)
-    let email_html    = html_template.toString()
+    def hf            = new File("${workflow.projectDir}/assets/email_template.html")
+    def html_template = engine.createTemplate(hf).make(email_fields)
+    def email_html    = html_template.toString()
 
     // Render the sendmail template
-    let max_multiqc_email_size = (params.containsKey('max_multiqc_email_size') ? params.max_multiqc_email_size : 0) as nextflow.util.MemoryUnit
-    let smail_fields           = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "${workflow.projectDir}", mqcFile: mqc_report, mqcMaxSize: max_multiqc_email_size.toBytes() ]
-    let sf                     = new File("${workflow.projectDir}/assets/sendmail_template.txt")
-    let sendmail_template      = engine.createTemplate(sf).make(smail_fields)
-    let sendmail_html          = sendmail_template.toString()
+    def max_multiqc_email_size = (params.containsKey('max_multiqc_email_size') ? params.max_multiqc_email_size : 0) as nextflow.util.MemoryUnit
+    def smail_fields           = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "${workflow.projectDir}", mqcFile: mqc_report, mqcMaxSize: max_multiqc_email_size.toBytes() ]
+    def sf                     = new File("${workflow.projectDir}/assets/sendmail_template.txt")
+    def sendmail_template      = engine.createTemplate(sf).make(smail_fields)
+    def sendmail_html          = sendmail_template.toString()
 
     // Send the HTML e-mail
-    let colors = logColours(monochrome_logs)
+    def colors = logColours(monochrome_logs)
     if (email_address) {
         try {
             if (plaintext_email) { throw GroovyException('Send plaintext e-mail, not HTML') }
             // Try to send HTML e-mail using sendmail
-            let sendmail_tf = new File(workflow.launchDir.toString(), ".sendmail_tmp.html")
+            def sendmail_tf = new File(workflow.launchDir.toString(), ".sendmail_tmp.html")
             sendmail_tf.withWriter { w -> w << sendmail_html }
             [ 'sendmail', '-t' ].execute() << sendmail_html
             log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (sendmail)-"
         } catch (all) {
             // Catch failures and try with plaintext
-            let mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
+            def mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
             mail_cmd.execute() << email_html
             log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (mail)-"
         }
     }
 
     // Write summary e-mail HTML to a file
-    let output_hf = new File(workflow.launchDir.toString(), ".pipeline_report.html")
+    def output_hf = new File(workflow.launchDir.toString(), ".pipeline_report.html")
     output_hf.withWriter { w -> w << email_html }
     output_hf.toPath().copyTo("${outdir}/pipeline_info/pipeline_report.html");
     output_hf.delete()
 
     // Write summary e-mail TXT to a file
-    let output_tf = new File(workflow.launchDir.toString(), ".pipeline_report.txt")
+    def output_tf = new File(workflow.launchDir.toString(), ".pipeline_report.txt")
     output_tf.withWriter { w -> w << email_txt }
     output_tf.toPath().copyTo("${outdir}/pipeline_info/pipeline_report.txt");
     output_tf.delete()
@@ -346,8 +346,8 @@ fn completionEmail(
 //
 // Print pipeline summary on completion
 //
-fn completionSummary(monochrome_logs: boolean = true) {
-    let colors = logColours(monochrome_logs)
+def completionSummary(monochrome_logs: boolean = true) {
+    def colors = logColours(monochrome_logs)
     if (workflow.success) {
         if (workflow.stats.ignoredCount == 0) {
             log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Pipeline completed successfully${colors.reset}-"
@@ -362,13 +362,13 @@ fn completionSummary(monochrome_logs: boolean = true) {
 //
 // Construct and send a notification to a web server as JSON e.g. Microsoft Teams and Slack
 //
-fn imNotification(summary_params: Map, hook_url: String) {
-    let summary = [:]
+def imNotification(summary_params: Map, hook_url: String) {
+    def summary = [:]
     for (group in summary_params.keySet()) {
         summary << summary_params[group]
     }
 
-    let misc_fields = [:]
+    def misc_fields = [:]
     misc_fields['start']                                = workflow.start
     misc_fields['complete']                             = workflow.complete
     misc_fields['scriptfile']                           = workflow.scriptFile
@@ -380,7 +380,7 @@ fn imNotification(summary_params: Map, hook_url: String) {
     misc_fields['nxf_build']                            = workflow.nextflow.build
     misc_fields['nxf_timestamp']                        = workflow.nextflow.timestamp
 
-    let msg_fields = [:]
+    def msg_fields = [:]
     msg_fields['version']      = getWorkflowVersion()
     msg_fields['runName']      = workflow.runName
     msg_fields['success']      = workflow.success
@@ -394,21 +394,21 @@ fn imNotification(summary_params: Map, hook_url: String) {
     msg_fields['summary']      = summary << misc_fields
 
     // Render the JSON template
-    let engine       = new groovy.text.GStringTemplateEngine()
+    def engine       = new groovy.text.GStringTemplateEngine()
     // Different JSON depending on the service provider
     // Defaults to "Adaptive Cards" (https://adaptivecards.io), except Slack which has its own format
-    let json_path     = hook_url.contains("hooks.slack.com") ? "slackreport.json" : "adaptivecard.json"
-    let hf            = new File("${workflow.projectDir}/assets/${json_path}")
-    let json_template = engine.createTemplate(hf).make(msg_fields)
-    let json_message  = json_template.toString()
+    def json_path     = hook_url.contains("hooks.slack.com") ? "slackreport.json" : "adaptivecard.json"
+    def hf            = new File("${workflow.projectDir}/assets/${json_path}")
+    def json_template = engine.createTemplate(hf).make(msg_fields)
+    def json_message  = json_template.toString()
 
     // POST
-    let post = new URL(hook_url).openConnection();
+    def post = new URL(hook_url).openConnection();
     post.setRequestMethod("POST")
     post.setDoOutput(true)
     post.setRequestProperty("Content-Type", "application/json")
     post.getOutputStream().write(json_message.getBytes("UTF-8"));
-    let postRC = post.getResponseCode();
+    def postRC = post.getResponseCode();
     if (! postRC.equals(200)) {
         log.warn(post.getErrorStream().getText());
     }
