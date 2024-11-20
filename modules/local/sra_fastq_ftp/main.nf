@@ -11,9 +11,9 @@ process SRA_FASTQ_FTP {
 
     input:
     meta    : Map<String,String>
-    args    : String
 
     script:
+    def args = task.ext.args ?: ''
     if (meta.single_end.toBoolean()) {
         """
         wget \\

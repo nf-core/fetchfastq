@@ -12,13 +12,11 @@ process SRATOOLS_FASTERQDUMP {
     sra             : Path
     ncbi_settings   : Path
     certificate     : Path?
-    fasterqdump_args: String = '--split-files --include-technical'
-    pigz_args       : String = ''
-    prefix          : String = ''
 
     script:
-    if( !prefix )
-        prefix = "${meta.id}"
+    def args_fasterqdump = task.ext.args_fasterqdump ?: ''
+    def args_pigz = task.ext.args_pigz ?: ''
+    def prefix = task.ext.prefix ?: "${meta.id}"
     def outfile = meta.single_end ? "${prefix}.fastq" : prefix
     def key_file = ''
     if (certificate.baseName.endsWith('.jwt')) {
@@ -30,14 +28,14 @@ process SRATOOLS_FASTERQDUMP {
     export NCBI_SETTINGS="\$PWD/${ncbi_settings}"
 
     fasterq-dump \\
-        $fasterqdump_args \\
+        $args_fasterqdump \\
         --threads $task.cpus \\
         --outfile $outfile \\
         ${key_file} \\
         ${sra}
 
     pigz \\
-        $pigz_args \\
+        $args_pigz \\
         --no-name \\
         --processes $task.cpus \\
         *.fastq

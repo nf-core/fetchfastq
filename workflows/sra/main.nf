@@ -55,7 +55,7 @@ workflow SRA {
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.FTP
         }                                                   // Channel<Map<String,String>>
         .map { meta ->
-            def out = SRA_FASTQ_FTP ( meta, params.sra_fastq_ftp_args )
+            def out = SRA_FASTQ_FTP ( meta )
             new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
 
@@ -68,9 +68,7 @@ workflow SRA {
 
     sratools_reads = FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
         sratools_metadata,
-        params.dbgap_key,
-        params.sratools_fasterqdump_args,
-        params.sratools_pigz_args
+        params.dbgap_key
     )                                                       // Channel<(Map<String,String>, List<Path>)>
 
     sratools_samples = sra_metadata.map { (meta, fastq) ->
@@ -87,7 +85,7 @@ workflow SRA {
             !skip_fastq_download && getDownloadMethod(meta, params.download_method) == DownloadMethod.ASPERA
         }                                                   // Channel<Map<String,String>>
         .map { meta ->
-            def out = ASPERA_CLI ( meta, 'era-fasp', params.aspera_cli_args )
+            def out = ASPERA_CLI ( meta, 'era-fasp' )
             new Sample(meta.id, out.fastq_1, out.fastq_2, out.md5_1, out.md5_2)
         }                                                   // Channel<Sample>
 
@@ -128,10 +126,6 @@ record SraParams {
     download_method             : DownloadMethod
     skip_fastq_download         : boolean
     dbgap_key                   : Path?
-    aspera_cli_args             : String
-    sra_fastq_ftp_args          : String
-    sratools_fasterqdump_args   : String
-    sratools_pigz_args          : String
 }
 
 enum DownloadMethod {

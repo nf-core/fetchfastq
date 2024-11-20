@@ -11,17 +11,17 @@ process SRATOOLS_PREFETCH {
     meta            : Map<String,String>
     ncbi_settings   : Path
     certificate     : Path?
-    prefetch_args   : String = ''
-    retry_args      : String = '5 1 100'  // <num retries> <base delay in seconds> <max delay in seconds>
 
     shell:
+    args_prefetch = task.ext.args_prefetch ?: ''
+    args_retry = task.ext.args_retry ?: '5 1 100'  // <num retries> <base delay in seconds> <max delay in seconds>
     id = meta.run_accession
     if (certificate) {
         if (certificate.baseName.endsWith('.jwt')) {
-            prefetch_args += " --perm ${certificate}"
+            args_prefetch += " --perm ${certificate}"
         }
         else if (certificate.baseName.endsWith('.ngc')) {
-            prefetch_args += " --ngc ${certificate}"
+            args_prefetch += " --ngc ${certificate}"
         }
     }
 

@@ -9,8 +9,6 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     take:
     sra_metadata                : Channel<Map<String,String>>
     dbgap_key                   : Path?
-    sratools_fasterqdump_args   : String
-    sratools_pigz_args          : String
 
     main:
     //
@@ -22,21 +20,12 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
         //
         // Prefetch sequencing reads in SRA format.
         //
-        def sra = SRATOOLS_PREFETCH (
-            meta,
-            ncbi_settings,
-            dbgap_key )
+        def sra = SRATOOLS_PREFETCH ( meta, ncbi_settings, dbgap_key )
 
         //
         // Convert the SRA format into one or more compressed FASTQ files.
         //
-        def fastq = SRATOOLS_FASTERQDUMP (
-            meta,
-            sra,
-            ncbi_settings,
-            dbgap_key,
-            sratools_fasterqdump_args,
-            sratools_pigz_args )
+        def fastq = SRATOOLS_FASTERQDUMP ( meta, sra, ncbi_settings, dbgap_key )
 
         ( meta, fastq )
     }

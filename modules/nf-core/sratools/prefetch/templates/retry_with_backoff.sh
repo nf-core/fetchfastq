@@ -42,9 +42,9 @@ retry_with_backoff() {
 
 export NCBI_SETTINGS="$PWD/!{ncbi_settings}"
 
-retry_with_backoff !{retry_args} \
+retry_with_backoff !{args_retry} \
     prefetch \
-    !{prefetch_args} \
+    !{args_prefetch} \
     !{id}
 
 [ -f !{id}.sralite ] && vdb-validate !{id}.sralite || vdb-validate !{id}

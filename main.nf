@@ -64,26 +64,6 @@ params {
         icon 'fas fa-address-card'
     }
 
-    aspera_cli_args: String {
-        description 'Command-line arguments for Aspera CLI'
-        defaultValue ''
-    }
-
-    sra_fastq_ftp_args: String {
-        description 'Command-line arguments for wget when downloading fastq files via FTP'
-        defaultValue ''
-    }
-
-    sratools_fasterqdump_args: String {
-        description 'Command-line arguments for sratools fasterqdump'
-        defaultValue ''
-    }
-
-    sratools_pigz_args: String {
-        description 'Command-line arguments for sratools pigz'
-        defaultValue ''
-    }
-
     // TODO: ...
 
 }
@@ -118,11 +98,7 @@ workflow {
             params.ena_metadata_fields,
             params.download_method,
             params.skip_fastq_download,
-            params.dbgap_key,
-            params.aspera_cli_args,
-            params.sra_fastq_ftp_args,
-            params.sratools_fasterqdump_args,
-            params.sratools_pigz_args
+            params.dbgap_key
         )
     )
 
