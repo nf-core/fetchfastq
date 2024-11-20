@@ -112,7 +112,7 @@ workflow {
     //
     // WORKFLOW: Run primary workflows for the pipeline
     //
-    def samples = SRA (
+    samples = SRA (
         Channel.fromList(params.input),
         SraParams(
             params.ena_metadata_fields,
@@ -129,7 +129,7 @@ workflow {
     //
     // SUBWORKFLOW: Collect software versions
     //
-    def versions = SOFTWARE_VERSIONS()
+    versions = SOFTWARE_VERSIONS()
 
     //
     // SUBWORKFLOW: Run completion tasks

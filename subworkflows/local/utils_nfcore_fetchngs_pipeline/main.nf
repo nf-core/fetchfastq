@@ -51,9 +51,9 @@ workflow PIPELINE_INITIALISATION {
     //
     // Validate parameters and generate parameter summary to stdout
     //
-    def pre_help_text = nfCoreLogo(monochrome_logs)
-    def post_help_text = '\n' + workflowCitation() + '\n' + dashedLine(monochrome_logs)
-    def workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv -output-dir <OUTDIR>"
+    pre_help_text = nfCoreLogo(monochrome_logs)
+    post_help_text = '\n' + workflowCitation() + '\n' + dashedLine(monochrome_logs)
+    workflow_command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input ids.csv -output-dir <OUTDIR>"
     UTILS_NFVALIDATION_PLUGIN (
         help,
         workflow_command,
@@ -89,7 +89,7 @@ workflow PIPELINE_COMPLETION {
 
     main:
 
-    def summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
+    summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
 
     //
     // Completion email and summary

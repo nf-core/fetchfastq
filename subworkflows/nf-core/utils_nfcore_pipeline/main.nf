@@ -26,8 +26,8 @@ workflow UTILS_NFCORE_PIPELINE {
 //
 workflow SOFTWARE_VERSIONS {
     main:
-    def processVersions = Channel.topic('versions', (String,String,String))
-    def workflowVersions = Channel.of(
+    processVersions = Channel.topic('versions', (String,String,String))
+    workflowVersions = Channel.of(
         ( 'Workflow', workflow.manifest.name, getWorkflowVersion() ),
         ( 'Workflow', 'Nextflow', workflow.nextflow.version )
     )
