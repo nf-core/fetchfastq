@@ -9,16 +9,16 @@ process SRA_RUNINFO_TO_FTP {
     input:
     runinfo : Path
 
+    output:
+    file('*.runinfo_ftp.tsv')
+
+    topic:
+    ( task.process, 'python', eval("python --version | sed 's/Python //g'") ) >> 'versions'
+
     script:
     """
     sra_runinfo_to_ftp.py \\
         ${runinfo} \\
         ${runinfo.baseName.tokenize(".")[0]}.runinfo_ftp.tsv
     """
-
-    output:
-    file('*.runinfo_ftp.tsv')
-
-    topic:
-    ( task.process, 'python', eval("python --version | sed 's/Python //g'") ) >> 'versions'
 }

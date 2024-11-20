@@ -12,6 +12,12 @@ process SRATOOLS_PREFETCH {
     ncbi_settings   : Path
     certificate     : Path?
 
+    output:
+    file(id)
+
+    topic:
+    ( task.process, 'sratools', eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
+
     shell:
     args_prefetch = task.ext.args_prefetch ?: ''
     args_retry = task.ext.args_retry ?: '5 1 100'  // <num retries> <base delay in seconds> <max delay in seconds>
@@ -26,10 +32,4 @@ process SRATOOLS_PREFETCH {
     }
 
     template 'retry_with_backoff.sh'
-
-    output:
-    file(id)
-
-    topic:
-    ( task.process, 'sratools', eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
 }

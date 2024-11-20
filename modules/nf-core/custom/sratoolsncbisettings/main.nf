@@ -10,13 +10,13 @@ process CUSTOM_SRATOOLSNCBISETTINGS {
     input:
     ids : Bag<Map<String,String>>
 
-    shell:
-    config = "/LIBS/GUID = \"${UUID.randomUUID().toString()}\"\\n/libs/cloud/report_instance_identity = \"true\"\\n"
-    template 'detect_ncbi_settings.sh'
-
     output:
     file('*.mkfg')
 
     topic:
     ( task.process, 'sratools', eval("vdb-config --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
+
+    shell:
+    config = "/LIBS/GUID = \"${UUID.randomUUID().toString()}\"\\n/libs/cloud/report_instance_identity = \"true\"\\n"
+    template 'detect_ncbi_settings.sh'
 }

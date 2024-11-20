@@ -13,6 +13,13 @@ process SRATOOLS_FASTERQDUMP {
     ncbi_settings   : Path
     certificate     : Path?
 
+    output:
+    files('*.fastq.gz').sort()
+
+    topic:
+    ( task.process, 'sratools', eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
+    ( task.process, 'pigz',     eval("pigz --version 2>&1 | sed 's/pigz //g'") )           >> 'versions'
+
     script:
     def args_fasterqdump = task.ext.args_fasterqdump ?: ''
     def args_pigz = task.ext.args_pigz ?: ''
@@ -40,11 +47,4 @@ process SRATOOLS_FASTERQDUMP {
         --processes $task.cpus \\
         *.fastq
     """
-
-    output:
-    files('*.fastq.gz').sort()
-
-    topic:
-    ( task.process, 'sratools', eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'") ) >> 'versions'
-    ( task.process, 'pigz',     eval("pigz --version 2>&1 | sed 's/pigz //g'") )           >> 'versions'
 }

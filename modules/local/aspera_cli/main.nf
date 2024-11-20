@@ -11,6 +11,15 @@ process ASPERA_CLI {
     meta    : Map<String,String>
     user    : String
 
+    output:
+    fastq_1 : Path  = file('*_1.fastq.gz')
+    fastq_2 : Path? = file('*_2.fastq.gz')
+    md5_1   : Path  = file('*_1.fastq.gz.md5')
+    md5_2   : Path? = file('*_2.fastq.gz.md5')
+
+    topic:
+    ( task.process, 'aspera_cli', eval('ascli --version') ) >> 'versions'
+
     script:
     def args = task.ext.args ?: ''
     def conda_prefix = ['singularity', 'apptainer'].contains(workflow.containerEngine) ? "export CONDA_PREFIX=/usr/local" : ""
@@ -51,13 +60,4 @@ process ASPERA_CLI {
         md5sum -c ${meta.id}_2.fastq.gz.md5
         """
     }
-
-    output:
-    fastq_1 : Path  = file('*_1.fastq.gz')
-    fastq_2 : Path? = file('*_2.fastq.gz')
-    md5_1   : Path  = file('*_1.fastq.gz.md5')
-    md5_2   : Path? = file('*_2.fastq.gz.md5')
-
-    topic:
-    ( task.process, 'aspera_cli', eval('ascli --version') ) >> 'versions'
 }

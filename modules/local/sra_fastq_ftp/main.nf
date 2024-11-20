@@ -12,6 +12,15 @@ process SRA_FASTQ_FTP {
     input:
     meta    : Map<String,String>
 
+    output:
+    fastq_1 : Path  = file('*_1.fastq.gz')
+    fastq_2 : Path? = file('*_2.fastq.gz')
+    md5_1   : Path  = file('*_1.fastq.gz.md5')
+    md5_2   : Path? = file('*_2.fastq.gz.md5')
+
+    topic:
+    ( task.process, 'wget', eval("echo \$(wget --version | head -n 1 | sed 's/^GNU Wget //; s/ .*\$//')") ) >> 'versions'
+
     script:
     def args = task.ext.args ?: ''
     if (meta.single_end.toBoolean()) {
@@ -43,13 +52,4 @@ process SRA_FASTQ_FTP {
         md5sum -c ${meta.id}_2.fastq.gz.md5
         """
     }
-
-    output:
-    fastq_1 : Path  = file('*_1.fastq.gz')
-    fastq_2 : Path? = file('*_2.fastq.gz')
-    md5_1   : Path  = file('*_1.fastq.gz.md5')
-    md5_2   : Path? = file('*_2.fastq.gz.md5')
-
-    topic:
-    ( task.process, 'wget', eval("echo \$(wget --version | head -n 1 | sed 's/^GNU Wget //; s/ .*\$//')") ) >> 'versions'
 }
