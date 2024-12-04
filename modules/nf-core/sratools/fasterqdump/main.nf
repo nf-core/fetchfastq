@@ -11,8 +11,6 @@ process SRATOOLS_FASTERQDUMP {
     tuple val(meta), path(sra)
     path ncbi_settings
     path certificate
-    val fasterqdump_args    // = '--split-files --include-technical'
-    val pigz_args           // = ''
 
     output:
     tuple val(meta), path('*.fastq.gz'), emit: reads
@@ -23,6 +21,8 @@ process SRATOOLS_FASTERQDUMP {
     task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def outfile = meta.single_end ? "${prefix}.fastq" : prefix
     def key_file = ''
@@ -35,14 +35,14 @@ process SRATOOLS_FASTERQDUMP {
     export NCBI_SETTINGS="\$PWD/${ncbi_settings}"
 
     fasterq-dump \\
-        $fasterqdump_args \\
+        $args \\
         --threads $task.cpus \\
         --outfile $outfile \\
         ${key_file} \\
         ${sra}
 
     pigz \\
-        $pigz_args \\
+        $args2 \\
         --no-name \\
         --processes $task.cpus \\
         *.fastq

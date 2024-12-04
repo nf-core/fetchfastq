@@ -35,10 +35,6 @@ workflow SRA {
     download_method             // enum: 'aspera' | 'ftp' | 'sratools'
     skip_fastq_download         // boolean
     dbgap_key                   // string
-    aspera_cli_args             // string
-    sra_fastq_ftp_args          // string
-    sratools_fasterqdump_args   // string
-    sratools_pigz_args          // string
 
     main:
     //
@@ -108,9 +104,7 @@ workflow SRA {
         //
         FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS (
             ch_sra_reads.sratools,
-            dbgap_key ? file(dbgap_key, checkIfExists: true) : [],
-            sratools_fasterqdump_args,
-            sratools_pigz_args
+            dbgap_key ? file(dbgap_key, checkIfExists: true) : []
         )
 
         //
@@ -118,8 +112,7 @@ workflow SRA {
         //
         ASPERA_CLI (
             ch_sra_reads.aspera,
-            'era-fasp',
-            aspera_cli_args
+            'era-fasp'
         )
 
         // Isolate FASTQ channel which will be added to emit block

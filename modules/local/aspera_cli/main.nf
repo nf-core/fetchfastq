@@ -10,7 +10,6 @@ process ASPERA_CLI {
     input:
     tuple val(meta), val(fastq)
     val user
-    val args
 
     output:
     tuple val(meta), path("*fastq.gz"), emit: fastq
@@ -18,6 +17,7 @@ process ASPERA_CLI {
     tuple val("${task.process}"), val('aspera_cli'), eval('ascli --version'), topic: versions
 
     script:
+    def args = task.ext.args ?: ''
     def conda_prefix = ['singularity', 'apptainer'].contains(workflow.containerEngine) ? "export CONDA_PREFIX=/usr/local" : ""
     if (meta.single_end) {
         """
@@ -66,11 +66,9 @@ workflow {
         ]
     ]
     def user = 'era-fasp'
-    def args = ''
 
     ASPERA_CLI (
         input,
-        user,
-        args
+        user
     )
 }

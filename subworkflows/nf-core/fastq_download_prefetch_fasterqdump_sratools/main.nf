@@ -9,8 +9,6 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     take:
     ch_sra_ids   // channel: [ val(meta), val(id) ]
     ch_dbgap_key // channel: [ path(dbgap_key) ]
-    sratools_fasterqdump_args   // string
-    sratools_pigz_args          // string
 
     main:
     //
@@ -30,9 +28,7 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     SRATOOLS_FASTERQDUMP (
         SRATOOLS_PREFETCH.out.sra,
         ch_ncbi_settings,
-        ch_dbgap_key,
-        sratools_fasterqdump_args,
-        sratools_pigz_args
+        ch_dbgap_key
     )
 
     emit:
