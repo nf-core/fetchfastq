@@ -27,11 +27,11 @@ include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS } from '../../subworkflow
 workflow SRA {
 
     take:
-    ids                         // channel: [ ids ]
-    ena_metadata_fields         // string
-    download_method             // enum: 'aspera' | 'ftp' | 'sratools'
-    skip_fastq_download         // boolean
-    dbgap_key                   // string
+    ids                 // channel: [ ids ]
+    ena_metadata_fields // string
+    download_method     // enum: 'aspera' | 'ftp' | 'sratools'
+    skip_fastq_download // boolean
+    dbgap_key           // string
 
     main:
     //
