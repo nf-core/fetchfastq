@@ -9,7 +9,6 @@
 ----------------------------------------------------------------------------------------
 */
 
-nextflow.enable.dsl = 2
 nextflow.preview.output = true
 nextflow.preview.topic = true
 
@@ -69,7 +68,6 @@ workflow {
     //
     PIPELINE_INITIALISATION (
         params.version,
-        params.help,
         params.validate_params,
         params.monochrome_logs,
         args,
@@ -84,7 +82,6 @@ workflow {
     NFCORE_FETCHNGS (
         PIPELINE_INITIALISATION.out.ids
     )
-
     //
     // SUBWORKFLOW: Run completion tasks
     //
