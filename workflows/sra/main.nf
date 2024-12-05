@@ -29,9 +29,6 @@ workflow SRA {
     take:
     ids                         // channel: [ ids ]
     ena_metadata_fields         // string
-    sample_mapping_fields       // string
-    nf_core_pipeline            // string
-    nf_core_rnaseq_strandedness // string
     download_method             // enum: 'aspera' | 'ftp' | 'sratools'
     skip_fastq_download         // boolean
     dbgap_key                   // string
@@ -95,8 +92,7 @@ workflow SRA {
         // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums
         //
         SRA_FASTQ_FTP (
-            ch_sra_reads.ftp,
-            sra_fastq_ftp_args
+            ch_sra_reads.ftp
         )
 
         //
