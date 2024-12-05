@@ -62,7 +62,6 @@ workflow SRA {
         .unique()
         .set { ch_sra_metadata }
 
-    ch_samples = Channel.empty()
     if (!skip_fastq_download) {
 
         ch_sra_metadata
@@ -124,16 +123,18 @@ workflow SRA {
             .map {
                 meta, fastq, md5 ->
                     def reads = fastq instanceof List ? fastq.flatten() : [ fastq ]
-                    def meta_clone = meta.clone()
+                    def meta_clone = meta + [
+                        fastq_1: reads[0],
+                        fastq_2: reads[1] && !meta.single_end ? reads[1] : null,
+                        md5_1: md5[0],
+                        md5_2: md5[1] && !meta.single_end ? md5[1] : null,
+                    ]
 
-                    meta_clone.fastq_1 = reads[0]
-                    meta_clone.fastq_2 = reads[1] && !meta.single_end ? reads[1] : null
-
-                    meta_clone.md5_1 = md5[0]
-                    meta_clone.md5_2 = md5[1] && !meta.single_end ? md5[1] : null
-
-                    return meta_clone
+                    return [ meta_clone, reads, md5 ]
             }
+    }
+    else {
+        ch_samples = Channel.empty()
     }
 
     emit:
