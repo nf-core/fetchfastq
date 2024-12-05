@@ -102,14 +102,12 @@ workflow {
 
 output {
     samples {
-        path { _meta, _fastq, _md5 ->
-            { file ->
-                def dir = [
-                    'fastq': 'fastq',
-                    'md5': 'fastq/md5'
-                ][file.ext]
-                "${dir}/${file.baseName}"
-            }
+        path { _sample ->
+            def dirs = [
+                'fastq': 'fastq',
+                'md5': 'fastq/md5'
+            ]
+            return { file -> "${dirs[file.extension]}/${file.name}" }
         }
         index {
             path 'samplesheet/samplesheet.json'

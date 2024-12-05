@@ -123,14 +123,12 @@ workflow SRA {
             .map {
                 meta, fastq, md5 ->
                     def reads = fastq instanceof List ? fastq.flatten() : [ fastq ]
-                    def meta_clone = meta + [
+                    meta + [
                         fastq_1: reads[0],
                         fastq_2: reads[1] && !meta.single_end ? reads[1] : null,
                         md5_1: md5[0],
                         md5_2: md5[1] && !meta.single_end ? md5[1] : null,
                     ]
-
-                    return [ meta_clone, reads, md5 ]
             }
     }
     else {
