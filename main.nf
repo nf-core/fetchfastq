@@ -107,7 +107,10 @@ output {
                 'fastq': 'fastq',
                 'md5': 'fastq/md5'
             ]
-            return { file -> "${dirs[file.extension]}/${file.name}" }
+            return { filename ->
+                def ext = filename.tokenize('.').last()
+                "${dirs[ext]}/${filename}"
+            }
         }
         index {
             path 'samplesheet/samplesheet.json'
