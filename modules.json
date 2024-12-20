@@ -4,7 +4,8 @@
     "repos": {
         "https://github.com/nf-core/modules.git": {
             "modules": {
-                "nf-core": {}
+                "nf-core": {
+                }
             },
             "subworkflows": {
                 "nf-core": {
