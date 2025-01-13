@@ -9,12 +9,13 @@ lint:
     - conf/igenomes_ignored.config
     - conf/modules.config
   files_unchanged:
-    - assets/sendmail_template.txt
+    - .github/PULL_REQUEST_TEMPLATE.md
     - assets/nf-core-fetchngs_logo_light.png
-    - docs/images/nf-core-fetchngs_logo_light.png
+    - assets/sendmail_template.txt
     - docs/images/nf-core-fetchngs_logo_dark.png
-  modules_config: False
-  multiqc_config: False
+    - docs/images/nf-core-fetchngs_logo_light.png
+  modules_config: false
+  multiqc_config: false
 nf_core_version: 3.0.2
 org_path: null
 repository_type: pipeline
