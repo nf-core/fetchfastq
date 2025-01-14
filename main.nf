@@ -9,6 +9,9 @@
 ----------------------------------------------------------------------------------------
 */
 
+nextflow.preview.output = true
+nextflow.preview.topic = true
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
@@ -18,6 +21,7 @@
 include { SRA                     } from './workflows/sra'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fetchngs_pipeline'
+include { softwareVersionsToYAML  } from './subworkflows/nf-core/utils_nfcore_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,8 +42,16 @@ workflow NFCORE_FETCHNGS {
     //
     // WORKFLOW: Download FastQ files for SRA / ENA / GEO / DDBJ ids
     //
-    SRA ( ids )
+    SRA (
+        ids,
+        params.ena_metadata_fields ?: '',
+        params.download_method,
+        params.skip_fastq_download,
+        params.dbgap_key
+    )
 
+    emit:
+    samples = SRA.out.samples
 }
 
 /*
@@ -81,6 +93,36 @@ workflow {
         params.monochrome_logs,
         params.hook_url
     )
+
+    publish:
+    NFCORE_FETCHNGS.out.samples >> 'samples'
+    softwareVersionsToYAML() >> 'versions'
+}
+
+
+output {
+    samples {
+        path { _sample ->
+            def dirs = [
+                'fastq': 'fastq',
+                'md5': 'fastq/md5'
+            ]
+            return { filename ->
+                def ext = filename.tokenize('.').last()
+                "${dirs[ext]}/${filename}"
+            }
+        }
+        index {
+            path 'samplesheet/samplesheet.json'
+        }
+    }
+
+    versions {
+        path '.'
+        index {
+            path 'nf_core_fetchngs_software_mqc_versions.yml'
+        }
+    }
 }
 
 /*

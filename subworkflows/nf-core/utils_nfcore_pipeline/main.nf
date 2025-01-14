@@ -90,30 +90,29 @@ def getWorkflowVersion() {
 }
 
 //
-// Get software versions for pipeline
-//
-def processVersionsFromYAML(yaml_file) {
-    def yaml = new org.yaml.snakeyaml.Yaml()
-    def versions = yaml.load(yaml_file).collectEntries { k, v -> [k.tokenize(':')[-1], v] }
-    return yaml.dumpAsMap(versions).trim()
-}
-
-//
 // Get workflow version for pipeline
 //
 def workflowVersionToYAML() {
-    return """
-    Workflow:
-        ${workflow.manifest.name}: ${getWorkflowVersion()}
-        Nextflow: ${workflow.nextflow.version}
-    """.stripIndent().trim()
+    return Channel.of(
+        [ 'Workflow', workflow.manifest.name, getWorkflowVersion() ],
+        [ 'Workflow', 'Nextflow', workflow.nextflow.version ]
+    )
 }
 
 //
 // Get channel of software versions used in pipeline in YAML format
 //
-def softwareVersionsToYAML(ch_versions) {
-    return ch_versions.unique().map { version -> processVersionsFromYAML(version) }.unique().mix(Channel.of(workflowVersionToYAML()))
+def softwareVersionsToYAML() {
+    return Channel.topic('versions')
+        .unique()
+        .mix(workflowVersionToYAML())
+        .map { process, name, version ->
+            [
+                (process.tokenize(':').last()): [
+                    (name): version
+                ]
+            ]
+        }
 }
 
 //
@@ -340,7 +339,7 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
     def email_html    = html_template.toString()
 
     // Render the sendmail template
-    def max_multiqc_email_size = (params.containsKey('max_multiqc_email_size') ? params.max_multiqc_email_size : 0) as nextflow.util.MemoryUnit
+    def max_multiqc_email_size = (params.containsKey('max_multiqc_email_size') ? params.max_multiqc_email_size : 0) as MemoryUnit
     def smail_fields           = [email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "${workflow.projectDir}", mqcFile: mqc_report, mqcMaxSize: max_multiqc_email_size.toBytes()]
     def sf                     = new File("${workflow.projectDir}/assets/sendmail_template.txt")
     def sendmail_template      = engine.createTemplate(sf).make(smail_fields)
@@ -350,8 +349,7 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
     def colors = logColours(monochrome_logs) as Map
     if (email_address) {
         try {
-            if (plaintext_email) {
-new org.codehaus.groovy.GroovyException('Send plaintext e-mail, not HTML')            }
+            if (plaintext_email) { throw new org.codehaus.groovy.GroovyException('Send plaintext e-mail, not HTML') }
             // Try to send HTML e-mail using sendmail
             def sendmail_tf = new File(workflow.launchDir.toString(), ".sendmail_tmp.html")
             sendmail_tf.withWriter { w -> w << sendmail_html }
@@ -369,13 +367,13 @@ new org.codehaus.groovy.GroovyException('Send plaintext e-mail, not HTML')      
     // Write summary e-mail HTML to a file
     def output_hf = new File(workflow.launchDir.toString(), ".pipeline_report.html")
     output_hf.withWriter { w -> w << email_html }
-    nextflow.extension.FilesEx.copyTo(output_hf.toPath(), "${outdir}/pipeline_info/pipeline_report.html")
+    output_hf.toPath().copyTo("${outdir}/pipeline_info/pipeline_report.html")
     output_hf.delete()
 
     // Write summary e-mail TXT to a file
     def output_tf = new File(workflow.launchDir.toString(), ".pipeline_report.txt")
     output_tf.withWriter { w -> w << email_txt }
-    nextflow.extension.FilesEx.copyTo(output_tf.toPath(), "${outdir}/pipeline_info/pipeline_report.txt")
+    output_tf.toPath().copyTo("${outdir}/pipeline_info/pipeline_report.txt")
     output_tf.delete()
 }
 
