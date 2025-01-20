@@ -10,8 +10,6 @@
 
 ## Pipeline tools
 
-
-
 ## Software packaging/containerisation tools
 
 - [Anaconda](https://anaconda.com)
