@@ -44,6 +44,8 @@ process SRA_TO_SAMPLESHEET {
             pipeline_map << [ replicate: 1 ]
         } else if (pipeline == 'taxprofiler') {
             pipeline_map << [ fasta: '' ]
+        } else if (pipeline == 'ampliseq'){
+            pipeline_map << [ run: '']
         }
     }
     pipeline_map << meta_clone
